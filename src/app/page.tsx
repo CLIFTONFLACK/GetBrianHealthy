@@ -218,7 +218,7 @@ export default async function HealthyHome() {
 
       {/* EMAIL UPDATES: shown only once the Resend variables are set (see newsletter.ts). */}
       {signupEnabled() && (
-        <section aria-labelledby="updates-heading" className="border-b border-slate-200 bg-white pb-16 sm:pb-24">
+        <section aria-labelledby="updates-heading" className="border-b border-slate-200 bg-white py-16 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <Signup />
           </div>

@@ -167,7 +167,7 @@ Before you push, check which GitHub account is active (`gh auth switch --user CL
 | Symptom | Cause and fix |
 | --- | --- |
 | The email sign-up form does not appear on the home page. | At least one of the four newsletter variables is missing, or `NEWSLETTER_SECRET` is shorter than 32 characters. Set all four in the Vercel project and redeploy. |
-| The sign-up form shows an error after submit. | `sendConfirmation` returned false or threw, usually because Resend refused the email. Check `RESEND_API_KEY` and that `NEWSLETTER_FROM` is a sender Resend accepts. |
+| The sign-up form shows an error after submit. | `sendConfirmation` returned false or threw, usually because Resend refused the email. Check `RESEND_API_KEY` and that `NEWSLETTER_FROM` is a sender Resend accepts. Every failed Resend call writes one `[newsletter] {"step":...,"status":...,"name":...,"message":...}` line to the runtime logs (search for `[newsletter]`); the address, key and token are scrubbed out of it, and it waits at most two seconds for Resend's error body. |
 | `/confirm` shows "That link didn't work". | The link is older than 48 hours, was copied incompletely, or `NEWSLETTER_SECRET` changed after the email was sent. Sign up again. The same message appears if Resend refuses to add the contact. |
 | A UK visitor sees the US page, or the other way round. | Check for a stale `hl-region` cookie, which overrides detection. Locally there is no `x-vercel-ip-country` header, so you always get `US` unless the cookie says otherwise. Use the footer switch. |
 | One country sees the other's content in production. | A page or route has been made static or cached. Remove `force-static`, `revalidate` or `use cache`. |

@@ -473,3 +473,240 @@ test("verifyConfiguredToken rejects a token signed under a previously configured
   const token = signToken("reader@example.com", 1_000_000, "c".repeat(32));
   assert.equal(verifyConfiguredToken(token, 1_000_000), null);
 });
+
+// ---------------------------------------------------------------------------
+// Failure diagnostics: one console.error line per failed Resend call
+// ---------------------------------------------------------------------------
+
+const SECRET_KEY = "re_SuperSecretKey_123";
+const READER = "reader@example.com";
+const PREFIX = "[newsletter] ";
+
+/** Captures console.error output for the duration of one test. */
+async function captureErrors<T>(fn: () => Promise<T>): Promise<{ lines: string[]; result: T }> {
+  const original = console.error;
+  const lines: string[] = [];
+  console.error = (...args: unknown[]) => {
+    lines.push(args.map(String).join(" "));
+  };
+  try {
+    const result = await fn();
+    return { lines, result };
+  } finally {
+    console.error = original;
+  }
+}
+
+function resendError(status: number, body: unknown): Response {
+  return new Response(typeof body === "string" ? body : JSON.stringify(body), { status });
+}
+
+/** Parses one log line, failing if it is not the expected "[newsletter] {json}" shape. */
+function parseLine(line: string): Record<string, unknown> {
+  assert.ok(line.startsWith(PREFIX), `unexpected log line: ${line}`);
+  return JSON.parse(line.slice(PREFIX.length));
+}
+
+/** Asserts the log leaks none of the things it must never carry. */
+function assertNoLeak(lines: string[], token?: string) {
+  const all = lines.join("\n");
+  assert.ok(!all.includes(READER), "log must not contain the reader's address");
+  assert.ok(!all.includes("reader%40example.com"), "log must not contain the encoded address");
+  assert.ok(!all.includes(SECRET_KEY), "log must not contain the API key");
+  assert.ok(!all.includes("Bearer"), "log must not contain the Authorization header");
+  assert.ok(!all.includes("confirm?t="), "log must not contain the confirmation link");
+  if (token) assert.ok(!all.includes(token), "log must not contain the token");
+}
+
+test("a refused confirmation email logs step, status and Resend's error name and message, and still returns false", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const message = "The getbrian.xyz domain is not verified. Please, add and verify your domain.";
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(403, { statusCode: 403, name: "validation_error", message }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(lines.length, 1);
+  assert.deepEqual(parseLine(lines[0]), { step: "send-email", status: 403, name: "validation_error", message });
+  assertNoLeak(lines, signToken(READER, 1_000_000, VALID_SECRET));
+});
+
+test("a Resend message that echoes the address or the key is scrubbed before logging", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () =>
+        resendError(422, {
+          name: "invalid_to_address",
+          message: `Invalid to ${READER} using ${SECRET_KEY} for Brian <brian@getbrian.xyz>`,
+        }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(lines.length, 1);
+  const logged = parseLine(lines[0]);
+  assert.equal(logged.status, 422);
+  assert.equal(logged.name, "invalid_to_address");
+  assert.match(String(logged.message), /\[email\]/);
+  assert.match(String(logged.message), /\[key\]/);
+  assertNoLeak(lines);
+  assert.ok(!lines[0].includes("brian@getbrian.xyz"), "no address of any kind may be logged");
+});
+
+test("scrubbing covers an address with parentheses, a percent-encoded address and a confirm-link token", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const token = signToken(READER, 1_000_000, VALID_SECRET);
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () =>
+        resendError(404, {
+          name: "not_found",
+          message: `bad a(b)c@example.com at /contacts/reader%40example.com via /confirm?t=${token}`,
+        }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(lines.length, 1);
+  assert.ok(!lines[0].includes("a(b)"), "no fragment of a parenthesised address may be logged");
+  assert.ok(!lines[0].includes("(b)c"), "no fragment of a parenthesised address may be logged");
+  assert.ok(!lines[0].includes("reader%40example.com"), "the encoded address must be scrubbed");
+  assert.ok(!lines[0].includes(READER), "the address must be scrubbed");
+  assert.ok(!lines[0].includes(token), "the token must be scrubbed");
+  assert.ok(!lines[0].includes(token.split(".")[0]), "the token payload must be scrubbed");
+  assert.match(String(parseLine(lines[0]).message), /\[email\]/);
+  assert.match(String(parseLine(lines[0]).message), /\[token\]/);
+});
+
+test("an error body that never finishes does not hold up the form: the status is logged after a short wait", async () => {
+  setFullEnv();
+  const stalled = {
+    ok: false,
+    status: 503,
+    text: () => new Promise<string>(() => {}),
+  } as unknown as Response;
+  const started = Date.now();
+  const { lines, result } = await captureErrors(() =>
+    withFetch(async () => stalled, () => sendConfirmation(READER, "https://site.test", 1_000_000)),
+  );
+  assert.equal(result, false);
+  assert.ok(Date.now() - started < 4000, "the wait for an error body must be bounded");
+  assert.deepEqual(parseLine(lines[0]), { step: "send-email", status: 503 });
+});
+
+test("a very long Resend message is truncated in the log", async () => {
+  setFullEnv();
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(500, { name: "application_error", message: "x".repeat(5000) }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.ok(lines[0].length < 500, `log line should be bounded, was ${lines[0].length}`);
+});
+
+test("a non-JSON error body (proxy page, empty) still logs the step and status, with no body text", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(502, `<html>Bad gateway for ${READER}</html>`),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(lines.length, 1);
+  assert.deepEqual(parseLine(lines[0]), { step: "send-email", status: 502 });
+  assertNoLeak(lines);
+});
+
+test("a fetch that throws logs the step and error class, never the message, then re-throws", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const failure = new TypeError(`fetch failed for ${READER} with ${SECRET_KEY}`, { cause: { code: "ENOTFOUND" } });
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () => {
+        throw failure;
+      },
+      async () => {
+        await assert.rejects(() => sendConfirmation(READER, "https://site.test", 1_000_000), failure);
+      },
+    ),
+  );
+  assert.equal(lines.length, 1);
+  assert.deepEqual(parseLine(lines[0]), { step: "send-email", status: null, name: "TypeError", code: "ENOTFOUND" });
+  assertNoLeak(lines);
+});
+
+test("an unconfigured feature logs which variables are missing by name only", async () => {
+  setFullEnv({ RESEND_API_KEY: undefined, NEWSLETTER_SECRET: "short-secret-value", NEWSLETTER_FROM: "Brian <b@x.test>" });
+  const { lines, result } = await captureErrors(() => sendConfirmation(READER, "https://site.test", 1_000_000));
+  assert.equal(result, false);
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "send-email",
+    status: null,
+    name: "not_configured",
+    missing: ["RESEND_API_KEY", "NEWSLETTER_SECRET"],
+  });
+  assert.ok(!lines[0].includes("short-secret-value"));
+  assert.ok(!lines[0].includes("b@x.test"));
+});
+
+test("a successful send logs nothing", async () => {
+  setFullEnv();
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => jsonResponse(200),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(result, true);
+  assert.deepEqual(lines, []);
+});
+
+test("a failed contact create logs the add-contact step with status, name and message", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(404, { name: "not_found", message: "Segment not found for seg_123" }),
+      () => addContact(READER),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(lines.length, 1);
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "add-contact",
+    status: 404,
+    name: "not_found",
+    message: "Segment not found for seg_123",
+  });
+  assertNoLeak(lines);
+});
+
+test("the expected 409 on contact create is not logged, but a failure after it is, under its own step", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const key = `${init?.method} ${String(input)}`;
+    if (key === CREATE) return resendError(409, { name: "validation_error", message: "exists" });
+    if (key === UPDATE) return resendError(401, { name: "restricted_api_key", message: "This API key is restricted" });
+    return jsonResponse(500);
+  }) as typeof fetch;
+  const { lines, result } = await captureErrors(() => withFetch(impl, () => addContact(READER)));
+  assert.equal(result, false);
+  assert.equal(lines.length, 1, "only the PATCH failure is logged");
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "add-contact/resubscribe",
+    status: 401,
+    name: "restricted_api_key",
+    message: "This API key is restricted",
+  });
+  assertNoLeak(lines);
+});
+
+test("a 409 on joining the segment is a normal outcome and is not logged", async () => {
+  setFullEnv();
+  const { impl } = recordingFetch({ [CREATE]: 409, [UPDATE]: 200, [JOIN]: 409 });
+  const { lines, result } = await captureErrors(() => withFetch(impl, () => addContact(READER)));
+  assert.equal(result, true);
+  assert.deepEqual(lines, []);
+});
