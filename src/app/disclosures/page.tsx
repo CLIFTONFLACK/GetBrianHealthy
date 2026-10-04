@@ -91,7 +91,17 @@ export default async function DisclosuresPage() {
               change country in the footer, one cookie remembers your choice for a year. It holds
               only the word US or GB, and it is not used for tracking or advertising. Amazon and its
               affiliate program set their own cookies once you reach their sites, under their own
-              privacy policies. We do not count or log clicks on the Buy buttons.
+              privacy policies. This site does not count clicks on the Buy buttons itself.
+            </p>
+            <p>
+              If you accept analytics cookies in the banner, this site uses Google Analytics to
+              count which pages are visited, along with your approximate location, device and
+              browser. Nothing is sent to Google before you accept, and advertising features and
+              Google signals are switched off. Page views are sent without the query string except
+              campaign tags (utm_), and the cookies stay on this site. Choose Decline
+              or use &ldquo;Cookie settings&rdquo; in the footer and the tag is switched off and its
+              cookies are deleted. Your choice is kept on your device. Pages that carry a
+              one-time email link are never measured.
             </p>
             <p>
               The only personal information these pages ask for is an email address, and only if you
