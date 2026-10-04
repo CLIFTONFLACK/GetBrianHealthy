@@ -16,7 +16,7 @@ import type { Region } from "./region";
 
 export const PROGRAM_NAME = "Brian's Human Longevity Program";
 export const PROGRAM_SHORT = "Human Longevity Program";
-export const CONTACT_EMAIL = "hello@getbrian.xyz";
+export const CONTACT_EMAIL = "healthy@getbrian.xyz";
 
 /**
  * Master switch for search engines. While false, every /healthy page is
