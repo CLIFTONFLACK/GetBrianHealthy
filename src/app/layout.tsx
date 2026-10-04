@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Sans, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
+import { Analytics, CookieSettingsButton } from "./analytics";
 import { AMAZON_ASSOCIATE_STATEMENT, LAUNCHED, PROGRAM_NAME } from "./data";
 import { Icon } from "./icons";
 import { getRegion } from "./region-server";
@@ -252,6 +253,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   GetBrian home
                 </a>
               </li>
+              <li>
+                <CookieSettingsButton className={`${linkClass} cursor-pointer text-slate-300! hover:text-white!`} />
+              </li>
             </ul>
           </div>
           <div className="border-b border-slate-800 py-6">
@@ -273,6 +277,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </footer>
       </div>
     </div>
+    <Analytics />
     </body>
     </html>
   );
