@@ -1,0 +1,856 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #ffffff;
+  --bg-panel: #f3f4f6;
+  /* Navy-tinted surface for the product cards' copy block, so it reads as a
+     distinct panel under the screenshot plate rather than continuing it.
+     Body text on this measures 7.4:1 and navy-soft 7.8:1. */
+  --bg-tint: #e9eff9;
+  --bg-elevated: rgba(255, 255, 255, 0.8);
+  --bg-card: rgba(255, 255, 255, 0.72);
+  --border: rgba(20, 23, 43, 0.1);
+  --border-strong: rgba(20, 23, 43, 0.18);
+  --fg: #14172b;
+  --fg-muted: #454a64;
+  --fg-subtle: #6b7089;
+
+  /* ---------------------------------------------------------------------
+     Brand ramp. Both anchors are sampled straight out of the supplied logo
+     (docs/GetBrian_Logo.png) rather than eyeballed — see scripts/trace-logo.mjs.
+     Contrast figures are against --bg (#ffffff) unless noted.
+     --------------------------------------------------------------------- */
+
+  /* Navy — masterbrand, gradients, links, focus rings */
+  --brand-navy: #0a1d3b;        /* logo navy, 15.9:1 */
+  --brand-navy-mid: #14305c;    /* gradient ramp */
+  --brand-navy-soft: #24497f;   /* body-safe navy text, 9.0:1 */
+  --brand-navy-bright: #35629f; /* links, focus rings, accents, 6.2:1 */
+
+  /* Gold — logo gold is 3.1:1 on white, so it is a display/fill colour only.
+     Small gold text must use --brand-gold-deep, and the CTA hover state uses
+     --brand-gold-hover, which still clears 4.5:1 against --fg ink. */
+  --brand-gold: #ba8b32;        /* logo gold: CTA fills, display wordmark */
+  --brand-gold-hover: #a87b2a;  /* CTA hover fill, 4.7:1 vs --fg */
+  --brand-gold-deep: #8a6520;   /* small gold text, 5.3:1 */
+  --brand-gold-light: #e0b84f;  /* gold on navy grounds only */
+
+  /* ---------------------------------------------------------------------
+     GetBrian Healthy ramp — /healthy only. Nothing above is renamed or
+     changed, so the rest of the site (main GetBrian pages, which also import
+     this file) is untouched.
+
+     The colours follow the Healthy logo (docs/GetBrian_Healthy_Logo.png): the
+     masterbrand navy, which the logo samples within noise of, and teal where
+     the masterbrand has gold. The kinetic-* names date from the "Kinetic
+     Longevity" brief this section was first built to. They were kept when the
+     values moved to the logo so that work in flight on other branches picks
+     the new colours up, and several no longer describe their colour:
+     -primary-electric is now the text-safe teal. Rename once that work has
+     landed. Roles are documented in the sub-brand's design-system.md, and
+     src/app/healthy/__tests__/palette.test.ts holds every ratio below to its
+     minimum. Contrast is against white unless noted.
+     --------------------------------------------------------------------- */
+  --kinetic-primary: var(--brand-navy);           /* navigation buttons, number tiles, 16.8:1 */
+  --kinetic-primary-hover: var(--brand-navy-mid); /* navy button hover, white text 13.1:1 */
+  --kinetic-primary-electric: #046d7c;            /* teal text, links, icons, focus rings, 6.0:1 */
+  --kinetic-primary-light: #ebf6f7;               /* teal tint for pills and chips, teal text on it 5.5:1 */
+  --kinetic-teal: #028f96;                        /* logo teal: fills and icons only, 3.9:1, never small text */
+  --kinetic-teal-on-dark: #4eb1b6;                /* teal on slate-900/950, 7.0:1+; only 2.5:1 on white */
+  --kinetic-amber: #d97706;                       /* retailer Buy buttons only, ink text 5.6:1 */
+  --kinetic-amber-hover: #f59e0b;                 /* Buy hover goes lighter: ink text 8.2:1 */
+  --kinetic-evidence-strong: #15803d;             /* "Robust" grade fill, white text 5.0:1 */
+  --kinetic-evidence-moderate: var(--brand-navy); /* "Promising" grade fill */
+  --kinetic-evidence-early: #b45309;              /* "Early" grade fill, white text 5.0:1 */
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-tint: var(--bg-tint);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-card: var(--bg-card);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-mid: var(--brand-navy-mid);
+  --color-brand-navy-soft: var(--brand-navy-soft);
+  --color-brand-navy-bright: var(--brand-navy-bright);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-hover: var(--brand-gold-hover);
+  --color-brand-gold-deep: var(--brand-gold-deep);
+  --color-brand-gold-light: var(--brand-gold-light);
+
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+
+  --color-kinetic-primary: var(--kinetic-primary);
+  --color-kinetic-primary-hover: var(--kinetic-primary-hover);
+  --color-kinetic-primary-electric: var(--kinetic-primary-electric);
+  --color-kinetic-primary-light: var(--kinetic-primary-light);
+  --color-kinetic-teal: var(--kinetic-teal);
+  --color-kinetic-teal-on-dark: var(--kinetic-teal-on-dark);
+  --color-kinetic-amber: var(--kinetic-amber);
+  --color-kinetic-amber-hover: var(--kinetic-amber-hover);
+  --color-kinetic-evidence-strong: var(--kinetic-evidence-strong);
+  --color-kinetic-evidence-moderate: var(--kinetic-evidence-moderate);
+  --color-kinetic-evidence-early: var(--kinetic-evidence-early);
+
+  /* Set by healthy/layout.tsx via next/font/google; declared here only so
+     Tailwind emits font-kinetic-heading / font-kinetic-body utilities. */
+  --font-kinetic-heading: var(--font-kinetic-heading);
+  --font-kinetic-body: var(--font-kinetic-body);
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+  /* The header is fixed, so a plain #anchor jump lands with the target's first
+     line tucked under it. Offsetting the scroll port by the header's height
+     plus its top inset fixes every in-page link at once, including the ones
+     the mobile sheet now exposes. */
+  scroll-padding-top: 6rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  /* Stops the rubber-band scroll chaining to the browser chrome / triggering
+     pull-to-refresh when the mobile sheet is open. */
+  overscroll-behavior-y: none;
+}
+
+/* iOS Safari zooms the viewport whenever a focused field is under 16px, and
+   never zooms back out. Sets the floor without disabling pinch-zoom. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}
+
+.glass {
+  background: var(--bg-card);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 28px rgba(20, 23, 43, 0.06);
+}
+
+/* Soft blurred blobs behind glass panels — gives the frosted glass something
+   colorful to refract, otherwise glassmorphism on a plain white bg just
+   reads as a bordered card. */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* /healthy only — same blur-blob mechanism as above, in the Healthy logo's
+   colours: a navy-blue glow (navy itself vanishes on the slate-950 ground,
+   so this is navy-bright) and the logo teal. */
+.blob-kinetic-primary {
+  background: radial-gradient(circle at 30% 30%, rgba(53, 98, 159, 0.4), transparent 70%);
+}
+
+.blob-kinetic-cyan {
+  background: radial-gradient(circle at 60% 40%, rgba(2, 143, 150, 0.35), transparent 70%);
+}
+
+/* /healthy hero photo — a one-time settle-into-focus zoom on load, not a
+   looping/continuous animation (those read as distracting on decorative
+   imagery). Covered by the prefers-reduced-motion block below like every
+   other animation in this file. */
+@keyframes kinetic-hero-zoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-kinetic-hero-zoom {
+  animation: kinetic-hero-zoom 1.4s ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 700ms ease both;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 600ms ease,
+    transform 600ms ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* /healthy hero photo, large screens: solid white to 35% of the viewport, where
+   the photo starts to show, then a fade to the photo. The copy column's real
+   right edge (max-w-6xl container, sm:px-6 gutter, 36rem column) is
+   max(37.5rem, 50vw + 1.5rem), so the right end of the copy sits on the early,
+   still mostly white part of the fade; the stop there is held at 0.75 so the
+   copy keeps its contrast over the photo. An earlier version used percentage
+   stops that dropped far lower under the copy (trust line 3.6:1 at
+   1280-1600px). */
+@media (min-width: 64rem) {
+  .healthy-hero-feather {
+    --copy-edge: max(37.5rem, calc(50vw + 1.5rem));
+    background-image: linear-gradient(
+      to right,
+      #fff 0,
+      #fff 35vw,
+      rgb(255 255 255 / 0.75) var(--copy-edge),
+      transparent calc(var(--copy-edge) + 12rem)
+    );
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   /healthy logo animation (logo-animation.tsx): "AI-assisted, human verified"
+   told with the Healthy mark. One 6s loop: the circuit traces draw in (the AI
+   gathering research), a pulse runs each one into the letterform, the cross
+   lights, a check seal stamps on, everything fades and it starts again.
+   Every element's resting style is its finished state and the loop only runs
+   on top of that, so with animations off (reduced motion below, or a UA that
+   skips them) the mark shows complete: traces, cross and seal all present. */
+.healthy-anim {
+  --healthy-loop: 6s;
+}
+
+.healthy-anim-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: healthy-trace var(--healthy-loop) ease-in-out infinite both;
+}
+
+.healthy-anim-node,
+.healthy-anim-cross,
+.healthy-anim-seal {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.healthy-anim-node {
+  animation: healthy-node var(--healthy-loop) ease-out infinite both;
+}
+
+.healthy-anim-cross {
+  animation: healthy-cross var(--healthy-loop) ease-out infinite both;
+}
+
+.healthy-anim-seal {
+  animation: healthy-seal var(--healthy-loop) cubic-bezier(0.34, 1.56, 0.64, 1) infinite both;
+}
+
+/* The pulse is decoration on top of the finished mark, so its resting state is
+   hidden rather than drawn. */
+.healthy-anim-pulse {
+  opacity: 0;
+  offset-rotate: 0deg;
+  animation: healthy-pulse var(--healthy-loop) ease-in-out infinite both;
+}
+
+/* Both captions are always readable; the loop only moves the emphasis. */
+.healthy-anim-step {
+  animation: healthy-step-ai var(--healthy-loop) ease-in-out infinite both;
+}
+
+.healthy-anim-step + .healthy-anim-step {
+  animation-name: healthy-step-human;
+}
+
+.healthy-anim[data-paused] * {
+  animation-play-state: paused;
+}
+
+/* Pick loop (healthy/pick-loop.tsx): pulses that travel the ring for good, so
+   the process reads as never finished. Pure decoration: hidden under reduced
+   motion, where the ring and chevrons still show the loop. */
+.healthy-loop-dot {
+  --healthy-loop-lap: 14s;
+  offset-rotate: 0deg;
+  animation: healthy-loop-travel var(--healthy-loop-lap) linear infinite;
+}
+
+@keyframes healthy-loop-travel {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* The mark feeding each step. One 10s round = 5 steps x SPOKE_STAGGER_S (2s)
+   in pick-loop.tsx; keep the two in step. Each spoke's pulse runs out from the
+   mark to its card, pauses while the card lights, then runs back. The
+   hub glows each time a pulse leaves. Static spokes remain under reduced motion. */
+.healthy-spoke-dot {
+  offset-rotate: 0deg;
+  opacity: 0;
+  animation: healthy-spoke-travel 10s ease-in-out infinite both;
+}
+
+@keyframes healthy-spoke-travel {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  9%,
+  11% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  19% {
+    opacity: 1;
+  }
+  20%,
+  100% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+}
+
+/* Each step inverts, white card to navy, while its spoke's pulse sits on it.
+   One clock per card: .healthy-step-lit animates --step-lit from 0 to 1 and
+   back, on the same 10s round and per-step delay as the spoke pulses, and every
+   colour below mixes on it. Registered so it tweens; where @property is not
+   supported it flips at the midpoint instead, which still reads. */
+@property --step-lit {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.healthy-step-lit {
+  animation: healthy-step-lit 10s ease-in-out infinite both;
+}
+
+@keyframes healthy-step-lit {
+  0%,
+  7%,
+  22%,
+  100% {
+    --step-lit: 0;
+  }
+  10%,
+  18% {
+    --step-lit: 1;
+  }
+}
+
+.healthy-step-card {
+  background-color: color-mix(in srgb, var(--kinetic-primary) calc(var(--step-lit) * 100%), #fff);
+  outline: 4px solid color-mix(in srgb, var(--kinetic-teal) calc(var(--step-lit) * 35%), transparent);
+}
+
+.healthy-step-glow {
+  background-color: color-mix(in srgb, #fff calc(var(--step-lit) * 100%), var(--kinetic-primary));
+  color: color-mix(in srgb, var(--kinetic-primary) calc(var(--step-lit) * 100%), #fff);
+}
+
+.healthy-step-label {
+  color: color-mix(in srgb, var(--kinetic-teal-on-dark) calc(var(--step-lit) * 100%), var(--kinetic-primary-electric));
+}
+
+.healthy-step-title {
+  color: color-mix(in srgb, #fff calc(var(--step-lit) * 100%), var(--color-slate-950, #020618));
+}
+
+/* Below lg the steps are a stacked list, so the lit card also steps out
+   toward its timeline marker, and the marker swells, to carry the pulse down
+   the column. */
+@media (max-width: 63.999rem) {
+  .healthy-step-card {
+    transform: translateX(calc(var(--step-lit) * 8px));
+  }
+}
+
+.healthy-step-marker {
+  transform: scale(calc(1 + var(--step-lit) * 0.6));
+  box-shadow: 0 0 0 calc(var(--step-lit) * 6px) color-mix(in srgb, var(--kinetic-teal) 30%, transparent);
+}
+
+.healthy-hub-glow {
+  opacity: 0;
+  animation: healthy-hub-glow 2s ease-out infinite both;
+}
+
+@keyframes healthy-hub-glow {
+  0% {
+    opacity: 0.16;
+  }
+  60%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Feathered edges (healthy/promo-video.tsx): all four sides fade to transparent
+   over the outer 9%, so the video melts into whatever background it sits on.
+   Two gradient masks, one per axis, intersected. */
+.healthy-feather {
+  --feather: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-image: var(--feather);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--feather);
+  mask-composite: intersect;
+}
+
+/* The mascot in the middle of the pick loop (healthy/mascot-animation.tsx).
+   Same 10s round as the spokes: each 20% slot is one step, starting as that
+   step's pulse leaves. The mascot crouches, hops toward the step (steps 2-3
+   sit to its right, 4-5 to its left), lands leaning that way as the pulse
+   arrives at the card, then straightens. Step 5, the human approval, gets the
+   big hop. It pivots on its feet, the image's bottom edge. */
+.healthy-mascot-body {
+  transform-origin: 50% 100%;
+  animation: healthy-mascot-flow 10s ease-in-out infinite both;
+}
+
+.healthy-mascot-shadow {
+  position: absolute;
+  bottom: 2%;
+  left: 22%;
+  width: 56%;
+  height: 7%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(15 23 42 / 0.22), transparent);
+  animation: healthy-mascot-shadow 10s ease-in-out infinite both;
+}
+
+.healthy-mascot[data-paused] * {
+  animation-play-state: paused;
+}
+
+@keyframes healthy-mascot-flow {
+  0%, 17%, 20%, 37%, 40%, 57%, 60%, 77%, 80%, 97%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1, 1);
+  }
+  2%, 22%, 42%, 62%, 82% {
+    transform: translateY(0) rotate(0deg) scale(1.05, 0.94);
+  }
+  /* Step 1: straight up, toward the top of the ring. */
+  6% {
+    transform: translateY(-9%) rotate(0deg) scale(0.97, 1.04);
+  }
+  10% {
+    transform: translateY(0) rotate(0deg) scale(1.02, 0.98);
+  }
+  /* Step 2: upper right. */
+  26% {
+    transform: translateY(-8%) rotate(6deg) scale(0.97, 1.04);
+  }
+  30% {
+    transform: translateY(0) rotate(5deg) scale(1.02, 0.98);
+  }
+  /* Step 3: lower right. */
+  46% {
+    transform: translateY(-6%) rotate(9deg) scale(0.97, 1.04);
+  }
+  50% {
+    transform: translateY(0) rotate(7deg) scale(1.02, 0.98);
+  }
+  /* Step 4: lower left. */
+  66% {
+    transform: translateY(-6%) rotate(-9deg) scale(0.97, 1.04);
+  }
+  70% {
+    transform: translateY(0) rotate(-7deg) scale(1.02, 0.98);
+  }
+  /* Step 5: upper left, the human approval. */
+  86% {
+    transform: translateY(-15%) rotate(-5deg) scale(1.04, 1.06);
+  }
+  90% {
+    transform: translateY(0) rotate(-4deg) scale(1.03, 0.97);
+  }
+}
+
+@keyframes healthy-mascot-shadow {
+  0%, 2%, 10%, 17%, 20%, 22%, 30%, 37%, 40%, 42%, 50%, 57%, 60%, 62%, 70%, 77%, 80%, 82%, 90%, 97%, 100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  6%, 26%, 46%, 66% {
+    transform: scaleX(0.8);
+    opacity: 0.65;
+  }
+  86% {
+    transform: scaleX(0.65);
+    opacity: 0.45;
+  }
+}
+
+@keyframes healthy-trace {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  22%,
+  86% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  96%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes healthy-node {
+  0%,
+  16% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  26%,
+  86% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes healthy-pulse {
+  0%,
+  24% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  27% {
+    offset-distance: 4%;
+    opacity: 1;
+  }
+  44% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  48%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes healthy-cross {
+  0%,
+  40% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  47% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  52%,
+  86% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes healthy-seal {
+  0%,
+  56% {
+    opacity: 0;
+    transform: scale(1.6) rotate(-14deg);
+  }
+  64%,
+  88% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes healthy-step-ai {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  56%,
+  94% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes healthy-step-human {
+  0%,
+  56% {
+    opacity: 0.4;
+  }
+  62%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   /healthy "One job each" rail above the current picks. Transitions, not
+   keyframes: it runs once. Each part's resting style is its finished state,
+   and the hidden start applies only under .rail-armed, which RailReveal adds
+   when JavaScript runs and removes as the row comes on screen. So without
+   JavaScript the picks show complete rather than as blank space. Delays come
+   from inline transition-delay so the stagger follows the card count. */
+.healthy-rail-line {
+  transform-origin: left;
+  transition: transform 900ms ease-out 150ms;
+}
+
+.healthy-rail-node {
+  transition:
+    opacity 500ms ease-out,
+    transform 500ms ease-out;
+}
+
+.healthy-rail-drop {
+  transform-origin: top;
+  transition: transform 450ms ease-out;
+}
+
+.rail-armed .healthy-rail-line {
+  transform: scaleX(0);
+}
+
+.rail-armed .healthy-rail-node {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.rail-armed .healthy-rail-drop {
+  transform: scaleY(0);
+}
+
+/* Mascot shower (healthy/mascot-shower.tsx): under each pick's goal, the
+   mascot tosses the goal's icons down into the card. Nine icons share one
+   2.7s fall, 0.3s apart (the delays in DROPS), so one leaves every 0.3s; the
+   mascot bobs twice a cycle, as if throwing. Each icon leaves a palm
+   (--x0, --y0), drifts to --x1 and spins to --r as it falls, speeding up
+   like something dropped. */
+.healthy-shower-mascot {
+  transform-origin: 50% 100%;
+  animation: healthy-shower-toss 1.35s ease-in-out infinite;
+}
+
+.healthy-shower-icon {
+  /* Resting frame, shown under reduced motion: scattered down the column. */
+  transform: translate(var(--x1), var(--rest)) rotate(var(--r));
+  opacity: 0.8;
+  animation: healthy-shower-fall 2.7s cubic-bezier(0.35, 0, 0.75, 0.6) infinite both;
+}
+
+.healthy-shower[data-paused] * {
+  animation-play-state: paused;
+}
+
+/* The hand in the picks carousel's "Swipe" hint (swipe-controls.tsx): sweeps
+   left, lifts back, rests. Starts and ends at rest, so under reduced motion
+   it simply stands still. */
+.healthy-swipe-hand {
+  animation: healthy-swipe-hand 2.2s ease-in-out infinite;
+}
+
+@keyframes healthy-swipe-hand {
+  0%,
+  15%,
+  100% {
+    transform: translateX(0) rotate(0);
+    opacity: 1;
+  }
+  45% {
+    transform: translateX(-12px) rotate(-12deg);
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(-12px) rotate(-12deg);
+    opacity: 0;
+  }
+  75% {
+    transform: translateX(0) rotate(0);
+    opacity: 0;
+  }
+}
+
+@keyframes healthy-shower-toss {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(0) scale(1.05, 0.93);
+  }
+  55% {
+    transform: translateY(-8%) scale(0.97, 1.04);
+  }
+}
+
+/* Each icon appears in the throwing palm (--x0, --y0), pops a little up and
+   outward as it is tossed, falls to --x1 and into the top of the card
+   (--land), swells, and is gone as its burst goes off. */
+@keyframes healthy-shower-fall {
+  0% {
+    transform: translate(var(--x0), var(--y0)) rotate(0deg) scale(0.4);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(calc(var(--x0) * 1.2), calc(var(--y0) - 10px)) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(var(--x1), var(--land)) rotate(var(--r)) scale(1);
+    opacity: 1;
+  }
+  84% {
+    transform: translate(var(--x1), var(--land)) rotate(var(--r)) scale(1.35);
+    opacity: 0.9;
+  }
+  88%,
+  100% {
+    transform: translate(var(--x1), var(--land)) rotate(var(--r)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* The small explosion where an icon lands: a dot with eight sparks (box
+   shadows in the icon's colour) that flies outward and fades, timed to the
+   icon's 80% landing on the same clock and delay. */
+.healthy-shower-burst {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 -9px currentColor,
+    6px -6px currentColor,
+    9px 0 currentColor,
+    6px 6px currentColor,
+    0 9px currentColor,
+    -6px 6px currentColor,
+    -9px 0 currentColor,
+    -6px -6px currentColor;
+  opacity: 0;
+  transform: translate(var(--x1), var(--by)) scale(0.2);
+  animation: healthy-shower-burst 2.7s ease-out infinite both;
+}
+
+@keyframes healthy-shower-burst {
+  0%,
+  81% {
+    transform: translate(var(--x1), var(--by)) scale(0.2);
+    opacity: 0;
+  }
+  83% {
+    transform: translate(var(--x1), var(--by)) scale(0.5);
+    opacity: 1;
+  }
+  95%,
+  100% {
+    transform: translate(var(--x1), var(--by)) scale(1.7);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Finished frame, no loop: the global rule below would otherwise play each
+     keyframe once in 0.01ms and leave the mark on its faded-out last frame. */
+  .healthy-anim * {
+    animation: none !important;
+  }
+
+  .healthy-loop-dot {
+    display: none;
+  }
+
+  .healthy-spoke-dot,
+  .healthy-hub-glow {
+    display: none;
+  }
+
+  .healthy-step-lit {
+    animation: none !important;
+  }
+
+  /* The mascot stands still on its shadow. */
+  .healthy-mascot * {
+    animation: none !important;
+  }
+
+  /* The shower rests: icons scattered down the column, mascot still, no bursts. */
+  .healthy-shower * {
+    animation: none !important;
+  }
+
+  .healthy-shower-burst {
+    display: none;
+  }
+
+  /* RailReveal doesn't arm under reduced motion; this covers a preference
+     switched on after it did. */
+  .rail-armed .healthy-rail-line,
+  .rail-armed .healthy-rail-node,
+  .rail-armed .healthy-rail-drop {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
