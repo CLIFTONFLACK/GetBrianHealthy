@@ -340,10 +340,10 @@ test("the Buy button is labelled with Amazon", async () => {
 // No price on an Amazon page
 // ---------------------------------------------------------------------------
 
-test("an Amazon page shows no dollar price and says why", async () => {
+test("an Amazon page with no live price shows no dollar price and points to Amazon", async () => {
   const text = await pageText(REAL_SLUG, "US");
   assert.doesNotMatch(text, /\$\d/);
-  assert.match(text, /this page does not show one/);
+  assert.match(text, /No current price is available here right now/);
   assert.match(text, /Price on\s+Amazon/);
 });
 

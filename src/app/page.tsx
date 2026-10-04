@@ -21,6 +21,7 @@ import {
   tileGoals,
 } from "./data";
 import { getRegion } from "./region-server";
+import { withPrices } from "../lib/amazon-prices";
 
 export const metadata: Metadata = {
   title: { absolute: `${PROGRAM_NAME} | GetBrian Healthy` },
@@ -39,7 +40,7 @@ const HERO_POINTS = [
 
 export default async function HealthyHome() {
   const region = await getRegion();
-  const products = productsFor(region);
+  const products = await withPrices(productsFor(region), region);
   // "Calm" is a claim for L-theanine, which has no authorised health claim in the UK.
   const heroPoints = region === "GB" ? HERO_POINTS.map((p, i) => (i === 2 ? { ...p, text: "Energy and Exercise, Explained From the Research" } : p)) : HERO_POINTS;
   const faqJsonLd = {

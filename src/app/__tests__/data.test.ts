@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   buyHref,
   costPerServing,
+  formatPrice,
+  formatPriceTime,
   getProduct,
   productsFor,
   getSupplement,
@@ -121,6 +123,80 @@ test("costPerServing handles a single serving (boundary of one)", () => {
 test("costPerServing treats a zero price as known, not unverified", () => {
   const product = baseProduct({ priceUsd: 0, servingsPerContainer: 10 });
   assert.equal(costPerServing(product), 0);
+});
+
+test("costPerServing uses the live price in preference to the stored one", () => {
+  const livePrice = { amount: 40, currency: "USD" as const, fetchedAt: "2026-10-04T14:05:00.000Z" };
+  const product = baseProduct({ priceUsd: 10, servingsPerContainer: 20, livePrice });
+  assert.equal(costPerServing(product), 2);
+});
+
+test("costPerServing divides a live GBP price by servings", () => {
+  const livePrice = { amount: 15, currency: "GBP" as const, fetchedAt: "2026-10-04T14:05:00.000Z" };
+  const product = baseProduct({ priceUsd: null, servingsPerContainer: 30, livePrice });
+  assert.equal(costPerServing(product), 0.5);
+});
+
+test("costPerServing returns null for a live price when servings are unknown", () => {
+  const livePrice = { amount: 15, currency: "USD" as const, fetchedAt: "2026-10-04T14:05:00.000Z" };
+  const product = baseProduct({ servingsPerContainer: null, livePrice });
+  assert.equal(costPerServing(product), null);
+});
+
+// ---------------------------------------------------------------------------
+// formatPrice
+// ---------------------------------------------------------------------------
+
+test("formatPrice writes dollars with a $ sign and two decimals", () => {
+  assert.equal(formatPrice(24.5, "USD"), "$24.50");
+});
+
+test("formatPrice writes pounds with a pound sign and two decimals", () => {
+  assert.equal(formatPrice(19.99, "GBP"), "£19.99");
+});
+
+test("formatPrice defaults to dollars when no currency is given", () => {
+  assert.equal(formatPrice(5), "$5.00");
+});
+
+test("formatPrice groups thousands", () => {
+  assert.equal(formatPrice(1234.5, "GBP"), "£1,234.50");
+});
+
+test("formatPrice rounds a per-serving fraction to pence", () => {
+  assert.equal(formatPrice(0.8333, "GBP"), "£0.83");
+});
+
+test("formatPrice shows zero as a price", () => {
+  assert.equal(formatPrice(0, "USD"), "$0.00");
+});
+
+// ---------------------------------------------------------------------------
+// formatPriceTime
+// ---------------------------------------------------------------------------
+
+test("formatPriceTime writes the date and 24-hour time in UTC", () => {
+  assert.equal(formatPriceTime("2026-10-04T14:05:00.000Z"), "4 Oct 2026, 14:05 UTC");
+});
+
+test("formatPriceTime converts an offset timestamp to UTC", () => {
+  assert.equal(formatPriceTime("2026-10-04T23:30:00+02:00"), "4 Oct 2026, 21:30 UTC");
+});
+
+test("formatPriceTime rolls over to the next UTC day rather than the viewer's", () => {
+  assert.equal(formatPriceTime("2026-12-31T23:59:00-05:00"), "1 Jan 2027, 04:59 UTC");
+});
+
+test("formatPriceTime shows midnight as 00:00, not 24:00", () => {
+  assert.equal(formatPriceTime("2026-10-04T00:00:00.000Z"), "4 Oct 2026, 00:00 UTC");
+});
+
+test("formatPriceTime returns an empty string for an unparseable timestamp", () => {
+  assert.equal(formatPriceTime("not a date"), "");
+});
+
+test("formatPriceTime returns an empty string for an empty string", () => {
+  assert.equal(formatPriceTime(""), "");
 });
 
 // ---------------------------------------------------------------------------

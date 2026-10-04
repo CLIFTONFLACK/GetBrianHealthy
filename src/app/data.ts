@@ -46,6 +46,18 @@ export type Ingredient = {
   studiedDose?: string;
 };
 
+/**
+ * A price read from Amazon's API for one region's listing. Only ever set by
+ * `withPrices` (src/lib/amazon-prices.ts), never stored in this file: Amazon's
+ * terms allow a price to be shown only if it was fetched recently.
+ */
+export type LivePrice = {
+  amount: number;
+  currency: "USD" | "GBP";
+  /** ISO timestamp of the Amazon response this amount came from. */
+  fetchedAt: string;
+};
+
 export type Product = {
   slug: string;
   name: string;
@@ -67,6 +79,8 @@ export type Product = {
   ingredients: Ingredient[];
   priceUsd: number | null;
   priceCheckedAt: string | null;
+  /** Amazon's current price for this region's listing; unset when no fresh price is available. */
+  livePrice?: LivePrice;
   testing: string[];
   evidence: EvidenceItem[];
   safety: string[];
@@ -575,7 +589,9 @@ const CREATINE_EVIDENCE_GB: EvidenceItem[] = [
  * were read from retailer listings and the brand's marketing on 2026-10-01
  * (the brand's own site could not be reached), so the Pure Encapsulations
  * picks stay `verified: false` until checked against the bottle. No prices are
- * stored: Amazon's terms limit how long a price may be shown without a live feed.
+ * stored here: Amazon's terms limit how long a price may be shown, so prices are
+ * read from Amazon's API at request time (see `withPrices`) and shown with the
+ * time they were fetched.
  *
  * US and UK offers sell different ASINs, so each region has its own link.
  */
@@ -827,8 +843,8 @@ export function getProduct(slug: string): Product | undefined {
 
 /**
  * The product as one region's visitor sees it: regional overrides applied, the
- * Amazon link for that country set as the affiliate link, and no price (Amazon
- * limits how long a price may be shown, so the page sends readers to Amazon for it).
+ * Amazon link for that country set as the affiliate link, and no price (a price
+ * is only ever added by `withPrices`, from a fresh Amazon response).
  * Null when the product is not sold in that region.
  */
 export function resolveProduct(p: Product, region: Region): Product | null {
@@ -860,10 +876,25 @@ export function pickFor(category: Product["category"], region: Region): Product 
   return productsFor(region).find((p) => p.category === category);
 }
 
-/** Price per serving in USD, or null if either figure is still unverified. */
+/** Money for display, in the currency of the Amazon store the price came from. */
+export function formatPrice(amount: number, currency: "USD" | "GBP" = "USD"): string {
+  return amount.toLocaleString(currency === "GBP" ? "en-GB" : "en-US", { style: "currency", currency });
+}
+
+/** "4 Oct 2026, 14:05 UTC": when a live price was read, in a zone every visitor can interpret. */
+export function formatPriceTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+  return `${date}, ${time} UTC`;
+}
+
+/** Price per serving in the price's own currency, or null if either figure is unknown. */
 export function costPerServing(p: Product): number | null {
-  if (p.priceUsd === null || !p.servingsPerContainer) return null;
-  return p.priceUsd / p.servingsPerContainer;
+  const price = p.livePrice?.amount ?? p.priceUsd;
+  if (price === null || price === undefined || !p.servingsPerContainer) return null;
+  return price / p.servingsPerContainer;
 }
 
 /**
