@@ -25,9 +25,6 @@ import { getRegion } from "./region-server";
 export const metadata: Metadata = {
   title: { absolute: `${PROGRAM_NAME} | GetBrian Healthy` },
   alternates: { canonical: "/" },
-  other: {
-    "impact-site-verification": "76ada0e2-8897-4f30-b9ef-80aebec89d38",
-  },
 };
 
 const primaryCta =
