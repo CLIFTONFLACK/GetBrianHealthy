@@ -240,7 +240,8 @@ function cardContent(product: Product): unknown[] {
   const el = ProductCard({ product });
   const articleKids = (el.props as { children: unknown[] }).children;
   const contentDiv = articleKids[articleKids.length - 1] as { props: { children: unknown[] } };
-  return contentDiv.props.children;
+  // The price-time paragraph is conditional, so a card without a live price ends in `undefined`.
+  return contentDiv.props.children.filter(Boolean);
 }
 
 function cardButtons(product: Product) {
@@ -299,6 +300,75 @@ test("ProductCard for an Amazon pick shows no dollar amount and names Amazon as 
 test("ProductCard for a product with a price still shows it", () => {
   const text = textOf(cardContent(baseProduct({ priceUsd: 30, servingsPerContainer: 60 })));
   assert.match(text, /\$30\.00/);
+});
+
+const LIVE_GBP = { amount: 15, currency: "GBP" as const, fetchedAt: "2026-10-04T14:05:00.000Z" };
+const LIVE_USD = { amount: 30, currency: "USD" as const, fetchedAt: "2026-10-04T14:05:00.000Z" };
+
+function priceTimeLine(product: Product) {
+  const kids = cardContent(product) as { type: unknown; props: Record<string, unknown> }[];
+  return kids.filter((k) => k && typeof k === "object" && k.props?.["data-price-time"] === true);
+}
+
+test("ProductCard shows a live GBP price with a pound sign, never a dollar sign", () => {
+  const text = textOf(cardContent(baseProduct({ livePrice: LIVE_GBP })));
+  assert.match(text, /£15\.00/);
+  assert.doesNotMatch(text, /\$\d/);
+});
+
+test("ProductCard shows a live USD price with a dollar sign", () => {
+  const text = textOf(cardContent(baseProduct({ livePrice: LIVE_USD })));
+  assert.match(text, /\$30\.00/);
+});
+
+test("ProductCard shows the Price from Amazon line with the UTC fetch time when it has a live price", () => {
+  const lines = priceTimeLine(baseProduct({ livePrice: LIVE_GBP }));
+  assert.equal(lines.length, 1);
+  assert.match(textOf(lines[0]), /^Price from Amazon, 4 Oct 2026, 14:05 UTC\. It can change; Amazon's page is current\.$/);
+});
+
+test("ProductCard shows no Price from Amazon line when there is no live price", () => {
+  const product = baseProduct({ priceUsd: 30, retailer: "Amazon" });
+  assert.equal(priceTimeLine(product).length, 0);
+  assert.doesNotMatch(textOf(cardContent(product)), /Price from Amazon/);
+});
+
+test("ProductCard prefers the live price over a stored price", () => {
+  const text = textOf(cardContent(baseProduct({ priceUsd: 99, livePrice: LIVE_GBP })));
+  assert.match(text, /£15\.00/);
+  assert.doesNotMatch(text, /99/);
+});
+
+test("ProductCard prints the per-serving cost in the live price's currency", () => {
+  const text = textOf(cardContent(baseProduct({ servingsPerContainer: 30, livePrice: LIVE_GBP })));
+  assert.match(text, /ct\s*·\s*£0\.50\/serving/);
+});
+
+test("ProductCard keeps the Amazon Associate sentence when it adds the price time line", () => {
+  const kids = cardContent(baseProduct({ livePrice: LIVE_GBP })) as { props: Record<string, unknown> }[];
+  const statements = kids.filter((k) => k && typeof k === "object" && k.props?.["data-amazon-statement"] === true);
+  assert.equal(statements.length, 1);
+});
+
+test("PriceLine shows a live GBP price with a pound sign", () => {
+  const el = PriceLine({ product: baseProduct({ livePrice: LIVE_GBP }) });
+  assert.equal(el.type, "span");
+  assert.equal(el.props.children, "£15.00");
+});
+
+test("PriceLine shows a live USD price with a dollar sign", () => {
+  const el = PriceLine({ product: baseProduct({ livePrice: LIVE_USD }) });
+  assert.equal(el.props.children, "$30.00");
+});
+
+test("PriceLine prefers the live price over a stored one", () => {
+  const el = PriceLine({ product: baseProduct({ priceUsd: 99, livePrice: LIVE_USD }) });
+  assert.equal(el.props.children, "$30.00");
+});
+
+test("PriceLine without a live price still falls back to the retailer pointer", () => {
+  const el = PriceLine({ product: baseProduct({ priceUsd: null, retailer: "Amazon" }) });
+  assert.deepEqual(el.props.children, ["Price on ", "Amazon"]);
 });
 
 test("ProductCard Buy button for a resolved pick goes straight to Amazon, never through /go", () => {

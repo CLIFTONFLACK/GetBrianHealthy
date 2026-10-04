@@ -65,7 +65,8 @@ export default async function DisclosuresPage() {
               Reviews are based on published research and product labels, gathered with the help of
               AI tools and checked by a person before publishing. No doctor or patient panel has
               evaluated these products yet. Prices and labels change; the retailer&apos;s own page
-              is always the current source, which is why these pages show no prices.
+              is always the current source. Where a price appears here it was read from Amazon
+              at the time shown beside it, and it may have changed since.
             </p>
 
             <h2>United Kingdom and United States</h2>

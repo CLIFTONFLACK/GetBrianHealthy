@@ -10,10 +10,10 @@ The site earns money through Amazon Associates links. The tags are `getbrian-20`
 
 ## Stack
 
-- Next.js 16.2.10 (App Router), React 19.2.4, TypeScript
+- Next.js 16.2.12 (App Router), React 19.2.4, TypeScript
 - Tailwind CSS 4 (through `@tailwindcss/postcss`)
 - Vercel project `getbrianhealthy` in the team `clifton-ai-team`
-- No database. The email sign-up uses the Resend API (see Configuration).
+- No database. The email sign-up uses the Resend API, and live prices come from Amazon's Creators API (see Configuration).
 
 ### Read this before you change Next.js code
 
@@ -35,7 +35,7 @@ npm install
 npm run dev
 ```
 
-Next.js prints a local URL, normally http://localhost:3000. Open it and the home page loads. With no environment variables set, the email sign-up form is hidden (see Configuration), and everything else works.
+Next.js prints a local URL, normally http://localhost:3000. Open it and the home page loads. With no environment variables set, the email sign-up form is hidden and no prices are shown (see Configuration), and everything else works.
 
 ## Scripts
 
@@ -54,7 +54,7 @@ All scripts are in `package.json`.
 
 ## Configuration
 
-The only environment variables the code reads are for the email sign-up. They are read in `src/app/newsletter.ts`. Set them in the Vercel project settings. `.env*` files are git-ignored.
+The code reads two groups of environment variables: the email sign-up (`src/app/newsletter.ts`) and Amazon live prices (`src/lib/amazon-prices.ts`). All of them are server-only. Set them in the Vercel project settings and never commit them. `.env*` files are git-ignored. Do not give any of them a `NEXT_PUBLIC_` prefix.
 
 | Variable | Required | What it does |
 | --- | --- | --- |
@@ -62,6 +62,10 @@ The only environment variables the code reads are for the email sign-up. They ar
 | `RESEND_SEGMENT_ID` | For sign-up | Resend segment that confirmed addresses are added to. |
 | `NEWSLETTER_SECRET` | For sign-up | Secret that signs the confirmation tokens (HMAC-SHA256). It must be at least 32 characters. |
 | `NEWSLETTER_FROM` | For sign-up | The `from` address on the confirmation email. |
+| `AMAZON_CREATORS_ID_US` | For US prices | Creators API credential ID for the US store. Used with `AMAZON_CREATORS_SECRET_US`. |
+| `AMAZON_CREATORS_SECRET_US` | For US prices | Creators API credential secret for the US store. |
+| `AMAZON_CREATORS_ID_GB` | For UK prices | Creators API credential ID for the UK store. Used with `AMAZON_CREATORS_SECRET_GB`. |
+| `AMAZON_CREATORS_SECRET_GB` | For UK prices | Creators API credential secret for the UK store. |
 
 There are no defaults. The code treats a variable as missing if it is unset or empty.
 
@@ -80,6 +84,24 @@ The feature is all or nothing. If any of the four is missing, or `NEWSLETTER_SEC
 3. Only then is the address added to the Resend segment. If Resend already has the contact (HTTP 409), the code marks it as subscribed and adds it to the segment.
 
 The form answers "sent" for any well-formed address, so it cannot be used to find out who is on the list. A hidden `website` field acts as a honeypot. `/confirm` is `noindex`.
+
+### Amazon live prices
+
+The home page and the product pages show Amazon's current price for a pick when the site can read one. `src/lib/amazon-prices.ts` fetches it from Amazon's Creators API at request time, and `withPrices(products, region)` sets `Product.livePrice` (`{ amount, currency, fetchedAt }`) on each product that has a fresh price. `src/app/page.tsx` and `src/app/products/[slug]/page.tsx` call it.
+
+**Amazon's terms.** A price may be shown only if it came from Amazon's API recently. Never hardcode a price, never store one in the repo or on disk, and never scrape one. `data.ts` has no prices: `resolveProduct` sets `priceUsd` and `priceCheckedAt` to `null` for every product.
+
+Each region is set up on its own. A region needs both its ID and its secret. If either is missing or empty, that region shows no prices and makes no calls to Amazon. If all four variables are absent, the site behaves as it did before live prices existed: cards say "Current price on Amazon" and the product page says "No current price is available here right now."
+
+What the code does:
+
+- **Which price.** For each product it asks for the listing of the product's ASIN in the visitor's region. It uses only the listing that wins the buy box, so the price matches what the Buy button's page leads with; no winner means no price. It discards the price if the amount is not a positive number, or if the currency is not USD for `US` or GBP for `GB`.
+- **Display.** US prices show in USD and UK prices in GBP. Each price is shown with the time it was fetched, in UTC, for example "Price from Amazon, 4 Oct 2026, 14:05 UTC." Cost per serving is worked out from the live price.
+- **Cache.** Each price is held in memory for 1 hour (`PRICE_TTL_MS`), per region and ASIN, in each server process. Nothing is written to disk. A listing that Amazon answers without a usable price is remembered for only 60 seconds (`FAILURE_BACKOFF_MS`), so one empty response cannot hide a price for an hour.
+- **Failure.** Any failed call (a network error, a 5-second timeout, a non-2xx status, or a token response without an `access_token`) leaves the page without a price. The region is then left alone for 60 seconds (`FAILURE_BACKOFF_MS`), so a slow Amazon outage cannot slow every page. A 401 or 403 from the price call also discards the cached access token. The code never throws to the page and does not log the failure.
+- **Calls.** Access tokens are cached and renewed 5 minutes before they expire. Product requests go out in batches of at most 10 ASINs. One refresh (token plus every product request) shares a single 3-second budget (`REFRESH_BUDGET_MS`), so a hung Amazon delays a page by 3 seconds at most.
+
+**Unconfirmed for the UK.** The UK token host (`https://api.amazon.co.uk/auth/o2/token`) and the single API host (`https://creatorsapi.amazon/catalog/v1/getItems`, with the UK store passed as `www.amazon.co.uk` in the `x-marketplace` header and the `marketplace` field) have not been checked against Amazon's documentation or a live call. Treat the first live UK call as the test. Until then, a UK page that shows no price may mean this handling is wrong, not that Amazon has no price. Because failures are not logged, you will not see why.
 
 ## Project layout
 
@@ -100,6 +122,9 @@ src/app/
   site.ts                           siteUrl and parentSiteUrl
   sitemap.ts, robots.ts             /sitemap.xml and /robots.txt
   __tests__/                        tests (more under go/, products/, why-these-picks/)
+src/lib/
+  amazon-prices.ts                  live Amazon prices (getPrices, withPrices)
+  __tests__/amazon-prices.test.ts   tests for the above
 public/healthy/                     static assets
 scripts/                            brand generator, test loader, mascot tools
 docs/GetBrian_Healthy_Logo.png      source image for brand:healthy
@@ -122,7 +147,7 @@ Everything the pages render comes from `src/app/data.ts`. Adding or swapping a p
 - **`AMAZON`** holds the host and Associates tag for each region: `www.amazon.com` with `getbrian-20`, and `www.amazon.co.uk` with `getbrian-21`. `amazonUrl(region, asin)` builds the link as `https://<host>/dp/<asin>?tag=<tag>`.
 - **`AMAZON_ASSOCIATE_STATEMENT`** is the disclosure sentence Amazon requires wherever the site links to it.
 - Other copy (`supplements`, `goals`, `faqs`, `pillars`, `TAGLINE`) is in the same file. It includes the UK variants, which carry only the claims Great Britain authorises.
-- Product pages never show a price. `resolveProduct` sets the price fields to `null`, because Amazon limits how long a price may be displayed.
+- Prices are not stored in this file. `resolveProduct` sets `priceUsd` and `priceCheckedAt` to `null`, because Amazon limits how long a price may be displayed. A price appears only when `withPrices` adds a fresh one from Amazon's API at request time (see "Amazon live prices").
 
 The header comment in `data.ts` sets the content rules. Evidence statements use structure/function wording only ("supports..."), never treat, prevent or cure. A pick stays `verified: false` until every label figure has a source. All four products are currently `verified: false`, so each product page shows a draft banner.
 
@@ -173,4 +198,6 @@ Before you push, check which GitHub account is active (`gh auth switch --user CL
 | One country sees the other's content in production. | A page or route has been made static or cached. Remove `force-static`, `revalidate` or `use cache`. |
 | `npm install` fails or hangs. | You are on the Google Drive volume (`G:`). Move to local disk. |
 | `npm run brand:healthy` fails. | It needs `sharp` installed (`npm install`) and `docs/GetBrian_Healthy_Logo.png`. It also throws if the logo has no pixels above its alpha threshold. |
+| No price shows, and cards say "Current price on Amazon". | Expected when the region's `AMAZON_CREATORS_ID_*` and `AMAZON_CREATORS_SECRET_*` pair is not both set in Vercel. Otherwise a call to Amazon failed and the region is in its 60-second back-off, or Amazon returned no usable price (wrong currency, no offer). Nothing is logged, so check the credentials first. After you change a variable in Vercel, redeploy. For the UK, see "Unconfirmed for the UK". |
+| A price is a few minutes old, or shows the wrong time. | Prices are cached in memory for up to 1 hour. The time beside the price is when Amazon was asked, in UTC, not the current time. |
 | `/go/<slug>` returns 404. | Expected for every current product. See "Buy links". |

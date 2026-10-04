@@ -18,6 +18,8 @@ import {
   AMAZON_ASSOCIATE_STATEMENT,
   buyHref,
   costPerServing,
+  formatPrice,
+  formatPriceTime,
   getProduct,
   getProductFor,
   goalsForSupplement,
@@ -28,6 +30,7 @@ import {
   supplements,
 } from "../../data";
 import { getRegion } from "../../region-server";
+import { withPrices } from "../../../lib/amazon-prices";
 
 export const dynamicParams = false;
 
@@ -55,10 +58,6 @@ export async function generateMetadata(props: PageProps<"/products/[slug]">): Pr
   };
 }
 
-function usd(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-border pt-10">
@@ -74,14 +73,16 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
   if (!base) notFound();
 
   const region = await getRegion();
-  const product = getProductFor(slug, region);
-  if (!product) {
+  const resolved = getProductFor(slug, region);
+  if (!resolved) {
     // Sold only in the other country: send the visitor to their own country's pick for this ingredient.
     const own = pickFor(base.category, region);
     if (own) redirect(`/products/${own.slug}`);
     notFound();
   }
 
+  const [product] = await withPrices([resolved], region);
+  const currency = product.livePrice?.currency ?? "USD";
   const perServing = costPerServing(product);
   const baseSupplement = supplementFor(product);
   const supplement = baseSupplement ? localizeSupplement(baseSupplement, region) : undefined;
@@ -338,17 +339,22 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
                 {perServing !== null && (
                   <div className="flex justify-between gap-4">
                     <dt className="text-fg-muted">Per serving</dt>
-                    <dd className="text-right font-semibold text-fg">{usd(perServing)}</dd>
+                    <dd className="text-right font-semibold text-fg">{formatPrice(perServing, currency)}</dd>
                   </div>
                 )}
               </dl>
-              {product.priceCheckedAt ? (
+              {product.livePrice ? (
+                <p className="mt-3 text-sm text-fg-subtle" data-price-time>
+                  Price from Amazon, {formatPriceTime(product.livePrice.fetchedAt)}. Prices change; {product.retailer ?? "Amazon"}
+                  &apos;s page is current.
+                </p>
+              ) : product.priceCheckedAt ? (
                 <p className="mt-3 text-sm text-fg-subtle">
                   Price checked {product.priceCheckedAt}. Prices change; the retailer&apos;s page is current.
                 </p>
               ) : product.retailer ? (
                 <p className="mt-3 text-sm text-fg-subtle">
-                  Prices change, so this page does not show one. {product.retailer}&apos;s page has the current price.
+                  No current price is available here right now. {product.retailer}&apos;s page has it.
                 </p>
               ) : null}
               <div className="mt-6">
@@ -371,10 +377,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
             <p className="truncate text-sm font-semibold text-fg">
               {product.brand} {product.name}
             </p>
-            {product.priceUsd !== null && (
+            {(product.livePrice || product.priceUsd !== null) && (
               <p className="text-sm text-fg-muted">
-                {usd(product.priceUsd)}
-                {perServing !== null && <span> &middot; {usd(perServing)}/serving</span>}
+                {formatPrice(product.livePrice?.amount ?? product.priceUsd ?? 0, currency)}
+                {perServing !== null && <span> &middot; {formatPrice(perServing, currency)}/serving</span>}
               </p>
             )}
           </div>

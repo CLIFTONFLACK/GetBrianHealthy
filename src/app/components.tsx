@@ -3,6 +3,8 @@ import Link from "next/link";
 import {
   buyHref,
   costPerServing,
+  formatPrice,
+  formatPriceTime,
   AMAZON_ASSOCIATE_STATEMENT,
   getSupplement,
   localizeGoal,
@@ -19,10 +21,6 @@ import {
 } from "./data";
 import { Icon } from "./icons";
 import type { Region } from "./region";
-
-function usd(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
 
 /** Shared reading column for prose pages. */
 export function Prose({ children }: { children: React.ReactNode }) {
@@ -167,9 +165,16 @@ export function FdaDisclaimer({ dark = false, region = "US" }: { dark?: boolean;
   );
 }
 
-/** What stands where a price would be, for products sold on Amazon, which limits how long a price may be shown. */
+/** The price on show: Amazon's live price when we have a fresh one, else a stored one, in that price's own currency. */
+function shownPrice(product: Product): { amount: number; currency: "USD" | "GBP" } | null {
+  if (product.livePrice) return product.livePrice;
+  return product.priceUsd !== null ? { amount: product.priceUsd, currency: "USD" } : null;
+}
+
+/** What stands where a price would be: Amazon's live price if fresh, else a pointer to Amazon for it. */
 export function PriceLine({ product }: { product: Product }) {
-  if (product.priceUsd !== null) return <span>{usd(product.priceUsd)}</span>;
+  const price = shownPrice(product);
+  if (price) return <span>{formatPrice(price.amount, price.currency)}</span>;
   if (product.retailer) return <span className="text-fg-muted">Price on {product.retailer}</span>;
   return <Pending />;
 }
@@ -185,6 +190,7 @@ export function ProductCard({
   showImage?: boolean;
 }) {
   const perServing = costPerServing(product);
+  const price = shownPrice(product);
   const baseSupplement = supplementFor(product);
   const role = baseSupplement ? localizeSupplement(baseSupplement, region).role : undefined;
   return (
@@ -223,8 +229,8 @@ export function ProductCard({
         </h3>
 
         <div className="mb-4 flex items-baseline gap-2 rounded-xl border border-slate-200/80 bg-slate-50 p-3">
-          {product.priceUsd !== null ? (
-            <span className="font-kinetic-heading text-2xl font-extrabold text-slate-950">{usd(product.priceUsd)}</span>
+          {price ? (
+            <span className="font-kinetic-heading text-2xl font-extrabold text-slate-950">{formatPrice(price.amount, price.currency)}</span>
           ) : product.retailer ? (
             <span className="text-sm font-semibold text-slate-700">Current price on {product.retailer}</span>
           ) : (
@@ -233,7 +239,7 @@ export function ProductCard({
           {perServing !== null && (
             <span className="text-xs font-semibold text-slate-500">
               {/* Kept this short on purpose: anything longer wraps on a 375px phone and grows the card. */}
-              {product.servingsPerContainer} ct &middot; {usd(perServing)}/serving
+              {product.servingsPerContainer} ct &middot; {formatPrice(perServing, price?.currency)}/serving
             </span>
           )}
         </div>
@@ -265,6 +271,11 @@ export function ProductCard({
         <p className="mt-3 text-[11px] leading-snug text-slate-500" data-amazon-statement>
           {AMAZON_ASSOCIATE_STATEMENT}
         </p>
+        {product.livePrice && (
+          <p className="mt-1 text-[11px] leading-snug text-slate-500" data-price-time>
+            Price from Amazon, {formatPriceTime(product.livePrice.fetchedAt)}. It can change; Amazon&apos;s page is current.
+          </p>
+        )}
       </div>
     </article>
   );
