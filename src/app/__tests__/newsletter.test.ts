@@ -579,6 +579,32 @@ test("scrubbing covers an address with parentheses, a percent-encoded address an
   assert.match(String(parseLine(lines[0]).message), /\[token\]/);
 });
 
+test("a stray % in the message does not stop an encoded address being scrubbed", async () => {
+  setFullEnv({ RESEND_API_KEY: SECRET_KEY });
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () =>
+        resendError(404, { name: "not_found", message: "100% sure: /contacts/reader%40example.com is unknown %zz" }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.ok(!lines[0].includes("reader%40example.com"), "the encoded address must be scrubbed");
+  assert.ok(!lines[0].includes(READER), "the address must be scrubbed");
+  assert.match(String(parseLine(lines[0]).message), /\[email\]/);
+});
+
+test("Resend error names that are 20+ characters stay readable, only free text gets the token mask", async () => {
+  setFullEnv();
+  const { lines } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(429, { name: "monthly_quota_exceeded", message: "You have hit your monthly sending quota." }),
+      () => sendConfirmation(READER, "https://site.test", 1_000_000),
+    ),
+  );
+  assert.equal(parseLine(lines[0]).name, "monthly_quota_exceeded");
+  assert.equal(parseLine(lines[0]).message, "You have hit your monthly sending quota.");
+});
+
 test("an error body that never finishes does not hold up the form: the status is logged after a short wait", async () => {
   setFullEnv();
   const stalled = {

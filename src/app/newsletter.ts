@@ -78,18 +78,20 @@ type Step = "send-email" | "add-contact" | "add-contact/resubscribe" | "add-cont
  * a confirm-link token. Input is cut to 2000 characters first so the patterns
  * stay cheap, and the result is capped at 300.
  */
-function scrub(text: string): string {
-  let t = text.slice(0, 2000);
-  try {
-    t = decodeURIComponent(t);
-  } catch {
-    // Not valid percent-encoding: scrub it as it is.
-  }
-  return t
-    .replace(/[^\s@<>"',;]+@[^\s@<>"',;]+/g, "[email]")
-    .replace(/\bre_[A-Za-z0-9_-]+/gi, "[key]")
-    .replace(/[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]{20,})?/g, "[token]")
-    .slice(0, 300);
+function scrub(text: string, maskTokens = true): string {
+  // Decode each run of %XX on its own, so one stray "%" (or a cut-off escape at
+  // the 2000-character edge) cannot stop the rest of the text being decoded.
+  const t = text.slice(0, 2000).replace(/(?:%[0-9a-f]{2})+/gi, (run) => {
+    try {
+      return decodeURIComponent(run);
+    } catch {
+      return run;
+    }
+  });
+  const cleaned = t.replace(/[^\s@<>"',;]+@[^\s@<>"',;]+/g, "[email]").replace(/\bre_[A-Za-z0-9_-]+/gi, "[key]");
+  // Error names such as "monthly_quota_exceeded" are fixed identifiers and
+  // must stay readable, so only free text gets the token mask.
+  return (maskTokens ? cleaned.replace(/[A-Za-z0-9_-]{32,}(?:\.[A-Za-z0-9_-]{20,})?/g, "[token]") : cleaned).slice(0, 300);
 }
 
 /** Longest we wait for an error body: the user is waiting on the form. */
@@ -116,11 +118,12 @@ async function logFailure(step: Step, res: Response): Promise<void> {
     const parsed: unknown = JSON.parse(text);
     if (parsed && typeof parsed === "object") {
       const { name: n, message: m } = parsed as { name?: unknown; message?: unknown };
-      if (typeof n === "string") name = scrub(n);
+      if (typeof n === "string") name = scrub(n, false);
       if (typeof m === "string") message = scrub(m);
     }
   } catch {
     // Not JSON, empty, or too slow (a proxy error page): the status alone has to do.
+    res.body?.cancel().catch(() => {});
   } finally {
     clearTimeout(timer);
   }
