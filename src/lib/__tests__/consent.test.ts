@@ -18,6 +18,7 @@ import {
 test("tracks www.getbrianhealthy.xyz and nothing else, including lookalikes and sibling sites", () => {
   assert.equal(isTrackedHost("www.getbrianhealthy.xyz"), true);
   assert.equal(isTrackedHost("WWW.GETBRIANHEALTHY.XYZ"), true);
+  assert.equal(isTrackedHost("getbrianhealthy.xyz"), true);
   for (const h of [
     "staging.getbrianhealthy.xyz",
     "x.www.getbrianhealthy.xyz",

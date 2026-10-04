@@ -8,7 +8,8 @@
  * Scope: the public pages (home, picks, method, about, disclosures, products). The email
  * confirmation page (its address carries a one-time token), the Buy-button redirect and the
  * API never load the tag or show the banner. The Buy-button redirect is a server redirect
- * with no page, so nothing about affiliate clicks is sent from this site.
+ * with no page, so this site sends nothing about those clicks. Direct outbound links are only
+ * kept out of Google Analytics by switching off Enhanced measurement "Outbound clicks" on the stream.
  */
 export const GA_MEASUREMENT_ID = "G-JMY0LLX9FE";
 /** Where the banner links for the fuller explanation, if the site has a privacy page. */

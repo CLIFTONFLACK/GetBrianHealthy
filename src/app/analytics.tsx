@@ -117,6 +117,8 @@ export function Analytics() {
   if (!hostname || isExcludedPath(pathname)) return null;
   const load = consent === "granted" && isTrackedHost(hostname);
   const showBanner = showsBanner(hostname) && (consent === null || reopened);
+  // Product pages carry a fixed purchase bar on phones; keep the banner above it.
+  const onProduct = pathname.startsWith("/products/");
 
   const choose = (value: Consent) => {
     writeConsent(value);
@@ -140,7 +142,7 @@ export function Analytics() {
       {showBanner && (
         <section
           aria-label="Cookie choice"
-          className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-2xl border border-border-strong bg-white p-5 shadow-xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-4 sm:mx-0"
+          className={`fixed inset-x-4 ${onProduct ? "bottom-28 lg:bottom-4" : "bottom-4"} z-40 mx-auto max-w-md rounded-2xl border border-border-strong bg-white p-5 shadow-xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-4 sm:mx-0`}
         >
           <h2 className="font-heading text-base font-semibold text-fg">Cookies</h2>
           <p className="mt-1 text-sm text-fg-muted">
