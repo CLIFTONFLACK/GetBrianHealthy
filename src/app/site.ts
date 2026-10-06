@@ -11,10 +11,11 @@ export const siteUrl = "https://www.getbrianhealthy.xyz";
 export const parentSiteUrl = "https://www.getbrian.xyz";
 
 /**
- * Brian's social accounts, shown in the footer and on the About page. Add YouTube
- * here once the channel exists. Only https links to the account pages themselves.
+ * Brian's social accounts, shown in the footer and on the About page. Only https
+ * links to the account pages themselves.
  */
 export const socialLinks = [
   { name: "Instagram", handle: "@getbrianhealthy", href: "https://www.instagram.com/getbrianhealthy/" },
   { name: "TikTok", handle: "@getbrianhealthy", href: "https://www.tiktok.com/@getbrianhealthy" },
+  { name: "YouTube", handle: "@GetBrianHealthy", href: "https://www.youtube.com/@GetBrianHealthy" },
 ] as const;
