@@ -7,7 +7,7 @@ import { AMAZON_ASSOCIATE_STATEMENT, LAUNCHED, PROGRAM_NAME } from "./data";
 import { Icon } from "./icons";
 import { getRegion } from "./region-server";
 import { RegionSwitch } from "./region-switch";
-import { parentSiteUrl, siteUrl } from "./site";
+import { parentSiteUrl, siteUrl, socialLinks } from "./site";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -253,6 +253,19 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   GetBrian home
                 </a>
               </li>
+              {socialLinks.map((s) => (
+                <li key={s.name}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`GetBrian Healthy on ${s.name} (opens in a new tab)`}
+                    className={`${linkClass} text-slate-300! hover:text-white!`}
+                  >
+                    {s.name}
+                  </a>
+                </li>
+              ))}
               <li>
                 <CookieSettingsButton className={`${linkClass} cursor-pointer text-slate-300! hover:text-white!`} />
               </li>
