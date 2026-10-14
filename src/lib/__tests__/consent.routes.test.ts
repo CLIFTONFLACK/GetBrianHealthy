@@ -9,7 +9,7 @@ import { isExcludedPath } from "../consent.ts";
 // so adding a page fails this test until someone decides whether it is private.
 
 const APP = join(import.meta.dirname, "..", "..", "app");
-const PUBLIC = new Set(["/", "/about", "/disclosures", "/method", "/products/x", "/why-these-picks", "/why-these-picks/creator-notes"]);
+const PUBLIC = new Set(["/", "/about", "/disclosures", "/method", "/products/x", "/routine", "/why-these-picks", "/why-these-picks/creator-notes"]);
 const PRIVATE = new Set(["/confirm", "/go/x"]);
 // Non-HTML handlers: they never render the component.
 const SKIP = new Set(["/robots.txt", "/sitemap.xml"]);

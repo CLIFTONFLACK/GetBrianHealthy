@@ -213,6 +213,12 @@ export default async function HealthyHome() {
             </Link>
           </p>
           <JobRail products={products} region={region} />
+          <p className="mt-10 text-center">
+            <Link href="/routine" className="group inline-flex min-h-11 items-center text-base font-bold text-kinetic-primary hover:text-kinetic-primary-electric">
+              See how a pick fits into your day: Brian&apos;s one-page routine
+              <Icon name="arrow" size={18} className="ml-1 transition-transform group-hover:translate-x-1.5" />
+            </Link>
+          </p>
         </div>
       </section>
 

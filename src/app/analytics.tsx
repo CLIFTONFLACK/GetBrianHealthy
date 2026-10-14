@@ -141,6 +141,7 @@ export function Analytics() {
       )}
       {showBanner && (
         <section
+          data-chrome
           aria-label="Cookie choice"
           className={`fixed inset-x-4 ${onProduct ? "bottom-28 lg:bottom-4" : "bottom-4"} z-40 mx-auto max-w-md rounded-2xl border border-border-strong bg-white p-5 shadow-xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-4 sm:mx-0`}
         >
