@@ -218,3 +218,70 @@ test("the print block hides site chrome only through body:has([data-routine-page
   assert.match(printBlock, /body:has\(\[data-routine-page\]\) \[data-chrome\]\s*\{\s*display:\s*none !important;/);
   assert.equal((css.match(/\[data-chrome\]/g) ?? []).length, 1);
 });
+
+// ---------------------------------------------------------------------------
+// The printed sheet's images: the section is display:none on screen, so a lazy
+// image inside it may not have loaded when the browser lays out the printout.
+// ---------------------------------------------------------------------------
+
+const sheetSection = source.match(/<section className="rt-sheet hidden print:block"[\s\S]*?<\/section>/)?.[0] ?? "";
+const sheetImages = sheetSection.match(/<Image\b[^>]*>/g) ?? [];
+
+test("the print sheet is found in the source, so the image checks below cannot pass vacuously", () => {
+  assert.match(sheetSection, /aria-label="Printable routine"/);
+});
+
+test("the print sheet holds three next/image elements: the mark, the mascot and the packshot thumbnail", () => {
+  assert.equal(sheetImages.length, 3);
+});
+
+test("every next/image in the print sheet is loading eager", () => {
+  assert.deepEqual(
+    sheetImages.map((tag) => /loading="eager"/.test(tag)),
+    [true, true, true],
+  );
+});
+
+test("the print sheet has no raw img element", () => {
+  assert.doesNotMatch(sheetSection, /<img\b/);
+});
+
+// ---------------------------------------------------------------------------
+// The sheet's CSS: .rt-sheet must not set display, or it overrides the section's
+// Tailwind `hidden` class on screen (unlayered CSS beats Tailwind's layer).
+// ---------------------------------------------------------------------------
+
+const sheetRules = topLevelRules.filter((r) => r.selector.split(",").map((s) => s.trim()).includes(".rt-sheet"));
+
+test("the .rt-sheet rule is top-level, outside @media print, so the display check below cannot pass vacuously", () => {
+  assert.equal(sheetRules.length, 1);
+});
+
+test("the .rt-sheet rule sets no display", () => {
+  assert.equal(sheetRules.length, 1, "expected one top-level .rt-sheet rule");
+  assert.doesNotMatch(sheetRules[0].body, /display\s*:/);
+});
+
+// ---------------------------------------------------------------------------
+// Print scope: every print rule must be under body:has([data-routine-page]), so the
+// print styles can never reach another page.
+// ---------------------------------------------------------------------------
+
+const printSelectors = (printBlock.match(/[^{}]+(?=\{)/g) ?? []).map((s) => s.trim());
+
+test("there is exactly one @media print block", () => {
+  assert.equal((css.match(/@media print/g) ?? []).length, 1);
+});
+
+test("the print block holds exactly the three routine-scoped rules, so the scope check below cannot pass vacuously", () => {
+  assert.deepEqual(printSelectors, [
+    "body:has([data-routine-page]) [data-chrome]",
+    "body:has([data-routine-page])",
+    "body:has([data-routine-page]) main",
+  ]);
+});
+
+test("every @media print selector starts with body:has([data-routine-page])", () => {
+  assert.ok(printSelectors.length > 0, "expected print selectors");
+  assert.ok(printSelectors.every((s) => s.startsWith("body:has([data-routine-page])")));
+});

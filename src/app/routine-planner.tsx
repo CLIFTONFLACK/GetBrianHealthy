@@ -7,7 +7,7 @@ import { Icon } from "./icons";
 import {
   STORAGE_KEY,
   dateKey,
-    isDayComplete,
+  isDayComplete,
   parseStored,
   planFor,
   prune,
@@ -562,55 +562,100 @@ export function RoutinePlanner({
       </section>
 
       {/* PRINT SHEET: hidden on screen, the only thing printed. */}
+      {/* Images here load eagerly: the section is display:none on screen, and a lazy image inside it
+          may not have loaded by the time the browser lays out the printout. */}
       <section className="rt-sheet hidden print:block" aria-label="Printable routine">
-        <header className="rt-sheet-head">
-          <Image src="/healthy/brand/healthy-mark.png" alt="" width={40} height={34} unoptimized className="h-9 w-auto" />
-          <div>
-            <h2>Brian&apos;s one-page routine</h2>
-            <p>GetBrian Healthy · getbrianhealthy.xyz/routine</p>
+        <div className="rt-sheet-page">
+          <header className="rt-sheet-band">
+            <span className="rt-sheet-mark">
+              <Image src="/healthy/brand/healthy-mark.png" alt="" width={40} height={34} unoptimized loading="eager" />
+            </span>
+            <div className="rt-sheet-titles">
+              <p className="rt-sheet-eyebrow">GetBrian Healthy</p>
+              <h2>Brian&apos;s one-page routine</h2>
+              <p className="rt-sheet-sub">Tick a box each time you do a step. Stick it on the fridge.</p>
+            </div>
+            <div className="rt-sheet-week">
+              <span>Week of</span>
+              <span className="rt-sheet-line" />
+            </div>
+            <Image src={MASCOT} alt="" width={473} height={372} unoptimized loading="eager" className="rt-sheet-mascot" />
+          </header>
+
+          {/* The day bar from the page, as a printed strip. */}
+          <div className="rt-sheet-sky" aria-hidden="true">
+            <span>Morning</span>
+            <span>Afternoon</span>
+            <span>Evening</span>
+            <span>Night</span>
           </div>
-          <p className="rt-sheet-week">Week of ______________</p>
-        </header>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Time</th>
-              <th scope="col">Step</th>
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <th key={d} scope="col" className="rt-day">
-                  {d}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {plan.map((s) => (
-              <tr key={s.id}>
-                <td>{s.time}</td>
-                <td>
-                  <strong>{s.title}</strong>
-                  {s.product && (
-                    <span>
-                      {s.product.brand} {s.product.name}
-                      {s.product.serving && <>. Label serving: {s.product.serving}</>}
-                    </span>
-                  )}
-                  {!s.daily && <span>2 or more days a week</span>}
-                </td>
-                {Array.from({ length: 7 }, (_, i) => (
-                  <td key={i} className="rt-day">
-                    <span className="rt-box" />
-                  </td>
+
+          <table className="rt-sheet-table">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Step</th>
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                  <th key={d} scope="col" className="rt-day">
+                    {d}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="rt-sheet-note">
-          The walk follows WHO guidance of at least 150 minutes of moderate activity a week. Timings are suggestions: move them to suit your day. Take
-          supplements as the label directs.
-        </p>
-        <p className="rt-sheet-note">{disclaimer}</p>
+            </thead>
+            <tbody>
+              {plan.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    <span className="rt-sheet-time">{s.time}</span>
+                  </td>
+                  <td>
+                    <div className="rt-sheet-step">
+                      {s.product?.image ? (
+                        <Image src={s.product.image} alt="" width={64} height={64} loading="eager" className="rt-sheet-pack" />
+                      ) : (
+                        <span className="rt-sheet-icon">
+                          <Icon name={s.icon} size={16} />
+                        </span>
+                      )}
+                      <div>
+                        <strong>{s.title}</strong>
+                        {s.product && (
+                          <span>
+                            {s.product.brand} {s.product.name}
+                            {s.product.serving && <> · Label serving: {s.product.serving}</>}
+                          </span>
+                        )}
+                        {!s.daily && <span>2 or more days a week</span>}
+                      </div>
+                    </div>
+                  </td>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <td key={i} className="rt-day">
+                      <span className="rt-box" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="rt-sheet-notes">
+            <strong>Notes for the week</strong>
+          </div>
+
+          <div className="rt-sheet-tip">
+            <strong>Brian&apos;s tip</strong>
+            <p>
+              Tie each step to something you already do: breakfast, the evening meal, putting the kettle on. Timings are suggestions, so move them to
+              suit your day. The walk follows WHO guidance of at least 150 minutes of moderate activity a week. Take supplements as the label directs.
+            </p>
+          </div>
+          <p className="rt-sheet-note">{disclaimer}</p>
+          <footer className="rt-sheet-foot">
+            <span>getbrianhealthy.xyz/routine</span>
+            <span>Re-checked every 6 months · No paid placements</span>
+          </footer>
+        </div>
       </section>
     </div>
   );

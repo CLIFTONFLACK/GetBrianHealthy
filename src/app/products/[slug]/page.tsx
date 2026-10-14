@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { siteUrl } from "../../site";
 import { healthyOpenGraph } from "../../layout";
 import {
+  AFFILIATE_DISCLOSURE,
   BuyButton,
   DraftBanner,
   FdaDisclaimer,
@@ -26,6 +27,7 @@ import {
   products,
   supplementFor,
   supplements,
+  topGrade,
 } from "../../data";
 import { getRegion } from "../../region-server";
 
@@ -59,9 +61,9 @@ function usd(n: number) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-border pt-10">
+    <section id={id} className="scroll-mt-24 border-t border-border pt-10">
       <h2 className="font-heading text-2xl font-semibold text-brand-navy">{title}</h2>
       <div className="mt-5">{children}</div>
     </section>
@@ -99,57 +101,121 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     url: `${siteUrl}/products/${product.slug}`,
   };
 
+  // The hero's photo is the goal this pick serves (the same photo as its home-page tile).
+  // It is a CSS background, not an <Image>: it is decoration, and the packshot stays the page's one image.
+  const heroGoal = jobs[0];
+  const grade = topGrade(product);
+  const facts = [
+    product.format,
+    product.servingSize && `Serving: ${product.servingSize}`,
+    product.servingsPerContainer && `${product.servingsPerContainer} servings`,
+  ].filter((f): f is string => Boolean(f));
+
   return (
-    <article className="px-4 py-12 sm:px-6 sm:py-16">
+    <article>
       <script
         type="application/ld+json"
         // Built from our own data file only, and "<" is escaped so no value can close the tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <div className="mx-auto max-w-6xl">
-        <nav aria-label="Breadcrumb" className="text-base">
-          <Link href="/#picks" className="text-kinetic-primary-electric underline underline-offset-4">
-            All picks
-          </Link>
-        </nav>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_22rem]">
-          <div className="min-w-0 space-y-10">
-            {!product.verified && <DraftBanner />}
+      {/* HERO: name, brand and packshot up top, so the reader knows what they are reading about
+          before the Buy button sends them to the retailer. Dark band over the goal photo; below
+          1544px it pulls up under the floating Menu (<main>'s pt-16) and pads that back itself.
+          From 1544px the frosted side menu (layout.tsx) is on screen instead, and it only reads
+          on a light page, so the band becomes a card inside the content column, clear of it. */}
+      <header className="relative isolate overflow-hidden bg-slate-950 text-white -mt-16 min-[1544px]:mx-auto min-[1544px]:mt-8 min-[1544px]:max-w-6xl min-[1544px]:rounded-3xl">
+        {heroGoal && (
+          <div
+            className="animate-kinetic-hero-zoom absolute inset-0 -z-20 bg-cover bg-center opacity-55"
+            style={{ backgroundImage: `url(${heroGoal.image})` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950 via-slate-950/80 to-kinetic-primary/50" aria-hidden="true" />
+        <div className="blob blob-kinetic-cyan pointer-events-none absolute -right-24 -bottom-32 -z-10 h-96 w-96" aria-hidden="true" />
 
-            <header>
-              {/* Brand and packshot up top, so the reader knows what they are reading about
-                  before the Buy button sends them to the brand's site. */}
-              <div className="flex items-start justify-between gap-6">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-kinetic-primary-electric">
-                    {product.category} &middot; {product.format}
-                  </p>
-                  <h1 className="mt-3 font-heading text-4xl font-semibold tracking-tight text-brand-navy text-balance sm:text-5xl">
-                    {product.name}
-                  </h1>
-                  <p className="mt-2 text-lg font-medium text-fg-muted">by {product.brand}</p>
-                </div>
-                {product.image && (
-                  <div className="relative h-28 w-28 shrink-0 rounded-2xl bg-bg-panel sm:h-36 sm:w-36">
-                    <Image
-                      src={product.image}
-                      alt={product.imageAlt}
-                      fill
-                      sizes="144px"
-                      className="object-contain p-3"
-                      priority
-                    />
-                  </div>
-                )}
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-20 pb-14 sm:px-6 sm:pt-24 sm:pb-16 lg:grid-cols-[1fr_20rem] lg:pt-28 min-[1544px]:pt-14">
+          <div className="animate-fade-in-up min-w-0">
+            <nav aria-label="Breadcrumb" className="text-base">
+              <Link href="/#picks" className="text-kinetic-teal-on-dark underline underline-offset-4 hover:text-white">
+                All picks
+              </Link>
+            </nav>
+            <p className="mt-6 text-sm font-extrabold tracking-widest text-kinetic-teal-on-dark uppercase">
+              {product.category}
+              {heroGoal && <> &middot; {heroGoal.label}</>}
+            </p>
+            <h1 className="mt-3 font-kinetic-heading text-4xl leading-[1.05] font-extrabold tracking-tight text-balance sm:text-6xl">
+              {product.name}
+            </h1>
+            <p className="mt-2 text-lg font-medium text-slate-300">by {product.brand}</p>
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-200 text-pretty">{product.summary}</p>
+
+            <ul className="mt-6 flex flex-wrap gap-2" aria-label="At a glance">
+              {facts.map((f) => (
+                <li key={f} className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-semibold text-white backdrop-blur-sm">
+                  {f}
+                </li>
+              ))}
+              {grade && (
+                <li>
+                  <GradeBadge grade={grade} />
+                </li>
+              )}
+            </ul>
+
+            {/* The disclosure sits directly under the Buy button it covers (FTC guidance), restyled for the
+                dark band; the two page links come after it, so a wrapping row never pushes it away. */}
+            <div className="mt-8 flex flex-col items-start">
+              <BuyButton product={product} from="product-hero" showDisclosure={false} />
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300" data-affiliate-disclosure>
+                {AFFILIATE_DISCLOSURE}
+              </p>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1">
+              <Link href="#research" className="inline-flex min-h-11 items-center font-bold text-white underline underline-offset-4 hover:text-kinetic-teal-on-dark">
+                What the research says
+              </Link>
+              <Link href="/routine" className="inline-flex min-h-11 items-center font-bold text-white underline underline-offset-4 hover:text-kinetic-teal-on-dark">
+                Fit it into your day
+              </Link>
+            </div>
+          </div>
+
+          {product.image && (
+            <div className="order-first mx-auto w-44 sm:w-56 lg:order-none lg:w-full">
+              <div className="animate-healthy-float relative aspect-square rounded-[2rem] bg-white shadow-[0_0_0_6px_rgba(78,177,182,0.25),0_30px_60px_rgba(2,6,23,0.55)]">
+                <Image
+                  src={product.image}
+                  alt={product.imageAlt}
+                  fill
+                  sizes="(min-width: 1024px) 320px, 224px"
+                  className="object-contain p-6"
+                  priority
+                />
               </div>
-              <p className="mt-6 text-xl leading-relaxed text-fg-muted text-pretty">{product.verdict}</p>
-              {product.image && product.imageNote && (
-                <p className="mt-3 text-sm text-fg-subtle" data-image-note>
+              {product.imageNote && (
+                <p className="mt-4 text-center text-sm text-slate-200 [text-shadow:0_1px_8px_rgba(2,6,23,0.9)]" data-image-note>
                   {product.imageNote}
                 </p>
               )}
-            </header>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="grid gap-10 lg:grid-cols-[1fr_22rem]">
+          <div className="min-w-0 space-y-10">
+            {!product.verified && <DraftBanner />}
+
+            <section aria-labelledby="verdict-heading" className="rounded-2xl border-l-4 border-kinetic-teal bg-bg-tint p-6">
+              <h2 id="verdict-heading" className="text-sm font-extrabold tracking-widest text-kinetic-primary-electric uppercase">
+                Brian&apos;s verdict
+              </h2>
+              <p className="mt-2 text-xl leading-relaxed text-fg text-pretty">{product.verdict}</p>
+            </section>
 
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="rounded-2xl bg-bg-tint p-6">
@@ -223,13 +289,19 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
               </p>
             </Section>
 
-            <Section title="What the research says">
-              {product.evidence.length === 0 && (
-                <p className="text-fg-muted">
-                  No health claim is authorised for this ingredient in the UK, so this page makes none.
-                  It lists what is on the label and nothing about what it does.
-                </p>
-              )}
+            <Section id="research" title="What the research says">
+              {/* UK wording only where it is true: a US page with no evidence yet says it is being verified. */}
+              {product.evidence.length === 0 &&
+                (region === "GB" ? (
+                  <p className="text-fg-muted">
+                    No health claim is authorised for this ingredient in the UK, so this page makes none.
+                    It lists what is on the label and nothing about what it does.
+                  </p>
+                ) : (
+                  <p className="text-fg-muted">
+                    <Pending /> (evidence)
+                  </p>
+                ))}
               <ul className="space-y-6">
                 {product.evidence.map((ev) => (
                   <li key={ev.claim} className="rounded-2xl border border-border p-6">
