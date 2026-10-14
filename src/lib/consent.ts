@@ -5,7 +5,7 @@
  * nothing is sent to Google before consent. The choice is kept in localStorage on
  * this device only.
  *
- * Scope: the public pages (home, picks, method, about, disclosures, products). The email
+ * Scope: the public pages (home, picks, method, routine, about, disclosures, products). The email
  * confirmation page (its address carries a one-time token), the Buy-button redirect and the
  * API never load the tag or show the banner. The Buy-button redirect is a server redirect
  * with no page, so this site sends nothing about those clicks. Direct outbound links are only

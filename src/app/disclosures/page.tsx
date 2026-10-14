@@ -107,6 +107,11 @@ export default async function DisclosuresPage() {
               one-time email link are never measured.
             </p>
             <p>
+              The daily routine page remembers the picks you add and the steps you tick in your
+              browser&apos;s own storage, on your device only. Nothing about them is sent to this
+              site or to anyone else, and clearing your browser&apos;s site data removes them.
+            </p>
+            <p>
               The only personal information these pages ask for is an email address, and only if you
               sign up to hear when a pick changes. It is used for nothing else: at most two emails a
               year, sent through our email provider, Resend, which stores the address for us. You are

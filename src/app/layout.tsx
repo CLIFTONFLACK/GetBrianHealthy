@@ -107,6 +107,7 @@ const nav = [
   { href: "/", label: "Home" },
   { href: "/#picks", label: "Brian's picks" },
   { href: "/method", label: "How Brian picks" },
+  { href: "/routine", label: "Daily routine" },
   { href: "/about", label: "About" },
   { href: "/about#contact", label: "Contact" },
 ];
@@ -134,7 +135,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           counts a ~15px scrollbar the page width does not: 1544px is the
           first width with a 16px gap on every page (measured, not assumed).
           Below that the Menu button further down takes over. */}
-      <aside className="fixed top-1/2 left-3 z-40 hidden w-40 -translate-y-1/2 flex-col rounded-2xl border border-white/60 bg-white/65 p-1.5 shadow-[0_8px_30px_rgba(10,29,59,0.12)] backdrop-blur-md min-[1544px]:flex">
+      <aside data-chrome className="fixed top-1/2 left-3 z-40 hidden w-40 -translate-y-1/2 flex-col rounded-2xl border border-white/60 bg-white/65 p-1.5 shadow-[0_8px_30px_rgba(10,29,59,0.12)] backdrop-blur-md min-[1544px]:flex">
         <Link
           href="/"
           aria-label="GetBrian Healthy home"
@@ -161,7 +162,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           Hidden on phones; there the homepage picks carry the line themselves (page.tsx),
           and product pages print it beside every Buy button. Any new page with a Buy
           link must do the same, or phones will show it with no disclosure. */}
-      <div className="hidden bg-slate-900 px-4 sm:block py-1.5 text-xs font-medium tracking-wide text-slate-300">
+      <div data-chrome className="hidden bg-slate-900 px-4 sm:block py-1.5 text-xs font-medium tracking-wide text-slate-300">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-kinetic-teal-on-dark" aria-hidden="true" />
@@ -178,7 +179,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       {/* Narrower screens: a floating Menu button (the sidebar above takes over
           from 1544px). The sticky wrapper is zero-height so it takes no space;
           <main>'s top padding keeps it clear of each page's first line. */}
-      <header className="pointer-events-none sticky top-0 z-40 h-0 min-[1544px]:hidden">
+      <header data-chrome className="pointer-events-none sticky top-0 z-40 h-0 min-[1544px]:hidden">
         <div className="mx-auto mt-3 flex max-w-6xl justify-end px-4 sm:px-6">
           <div className="pointer-events-auto flex items-center rounded-full border border-slate-200/80 bg-white/85 p-1.5 shadow-[0_8px_30px_rgba(10,29,59,0.12)] backdrop-blur-md">
             {/* No-JS disclosure menu. */}
@@ -209,7 +210,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
       {/* On a page with the fixed phone purchase bar (data-buy-bar), the footer
           pads itself so its last line clears the bar. */}
-      <footer className="border-t border-border bg-slate-950 text-slate-300 group-has-[[data-buy-bar]]/page:pb-24 lg:group-has-[[data-buy-bar]]/page:pb-0">
+      <footer data-chrome className="border-t border-border bg-slate-950 text-slate-300 group-has-[[data-buy-bar]]/page:pb-24 lg:group-has-[[data-buy-bar]]/page:pb-0">
         <div className="mx-auto max-w-6xl px-4 py-10 text-base sm:px-6">
           <div className="mb-8 flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/90 p-5">
             <Icon name="shield" size={22} className="mt-0.5 text-kinetic-teal-on-dark" />

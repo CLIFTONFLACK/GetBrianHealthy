@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/",
     "/method",
     "/why-these-picks",
+    "/routine",
     "/about",
     "/disclosures",
     // Crawlers arrive from the US, where a UK-only product page just redirects, so only US picks are listed.
