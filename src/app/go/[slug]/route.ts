@@ -8,7 +8,7 @@ import { getProduct, outboundUrl, usesRedirect } from "../../data";
  * 404 when the product's affiliate link is live and its programme forbids
  * redirects, so a stale or hand-typed /go link can never breach those terms.
  */
-const FROM_VALUES = new Set(["product", "product-mobile-bar", "picks", "home"]);
+const FROM_VALUES = new Set(["product", "product-hero", "product-mobile-bar", "picks", "home"]);
 
 export async function GET(request: Request, ctx: RouteContext<"/go/[slug]">) {
   const { slug } = await ctx.params;

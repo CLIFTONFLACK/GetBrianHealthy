@@ -4,7 +4,7 @@ import { mock } from "node:test";
 import Link from "next/link";
 import Image from "next/image";
 import { AFFILIATE_DISCLOSURE } from "../../../components.tsx";
-import { products, type Product } from "../../../data.ts";
+import { goals, products, type Product } from "../../../data.ts";
 import type { Region } from "../../../region.ts";
 
 // page.tsx imports `siteUrl` from ../../site and
@@ -148,7 +148,88 @@ async function redirectDigest(slug: string, region: Region): Promise<string> {
   return "did not throw";
 }
 
+/** A rendered host element (a tag, or a next/link or next/image element), as collectElements returns it. */
+type Host = { type: unknown; props: Record<string, unknown> };
+
+/** The children of the page's one <header>: the hero. */
+async function heroChildren(slug: string, region: Region = "US"): Promise<unknown> {
+  const all: Host[] = [];
+  collectElements(await renderPage(slug, region), all);
+  const headers = all.filter((el) => el.type === "header");
+  assert.equal(headers.length, 1, "expected exactly one <header> on the product page: the hero");
+  return headers[0].props.children;
+}
+
+/** Every host element inside the hero, in document order. */
+async function heroHosts(slug: string, region: Region = "US"): Promise<Host[]> {
+  const out: Host[] = [];
+  collectElements(await heroChildren(slug, region), out);
+  return out;
+}
+
+/** The hero's text, joined with no separators so JSX pieces read exactly as they are written. */
+async function heroText(slug: string, region: Region = "US"): Promise<string> {
+  const out: string[] = [];
+  collectText(await heroChildren(slug, region), out);
+  return out.join("");
+}
+
+async function heroHeading(slug: string, region: Region = "US"): Promise<string> {
+  const headings = (await heroHosts(slug, region)).filter((el) => el.type === "h1");
+  assert.equal(headings.length, 1, "expected exactly one h1 in the hero");
+  const out: string[] = [];
+  collectText(headings[0].props.children, out);
+  return out.join("");
+}
+
+/** The text of each fact chip (the <li>s of the hero's "At a glance" list), in order. */
+async function heroChips(slug: string, region: Region = "US"): Promise<string[]> {
+  const items = (await heroHosts(slug, region)).filter((el) => el.type === "li");
+  return items.map((li) => {
+    const out: string[] = [];
+    collectText(li.props.children, out);
+    return out.join("");
+  });
+}
+
+/** Every inline background-image the hero sets, in order. */
+async function heroBackgrounds(slug: string, region: Region = "US"): Promise<string[]> {
+  const hosts = await heroHosts(slug, region);
+  return hosts.flatMap((el) => {
+    const style = el.props.style as { backgroundImage?: string } | undefined;
+    return style?.backgroundImage ? [style.backgroundImage] : [];
+  });
+}
+
+/** Every href the hero renders (Link and plain anchor alike), in order. */
+async function heroHrefs(slug: string, region: Region = "US"): Promise<string[]> {
+  const hosts = await heroHosts(slug, region);
+  return hosts.filter((el) => typeof el.props.href === "string").map((el) => el.props.href as string);
+}
+
+/** Every next/image element inside the hero. */
+async function heroImages(slug: string, region: Region = "US"): Promise<{ src: unknown }[]> {
+  const out: { src: unknown }[] = [];
+  collectImages(await heroChildren(slug, region), out);
+  return out;
+}
+
+/** Every host element on the whole page, in document order. */
+async function pageHosts(slug: string, region: Region = "US"): Promise<Host[]> {
+  const out: Host[] = [];
+  collectElements(await renderPage(slug, region), out);
+  return out;
+}
+
+/** The space-separated class names on every host element in the hero that has a className. */
+async function heroClassNames(slug: string, region: Region = "US"): Promise<string[]> {
+  const hosts = await heroHosts(slug, region);
+  return hosts.flatMap((el) => (typeof el.props.className === "string" ? [el.props.className] : []));
+}
+
 const REAL_SLUG = "pure-encapsulations-magnesium-glycinate";
+const US_MAGNESIUM_BUY = "https://www.amazon.com/dp/B07P5K7DQP?tag=getbrian-20";
+const GB_MAGNESIUM_BUY = "https://www.amazon.co.uk/dp/B087B93NJB?tag=getbrian-21";
 
 test("sanity: the real magnesium product exists (proves the checks below aren't vacuous)", () => {
   assert.ok(products.some((p) => p.slug === REAL_SLUG), "fixture assumption: the real magnesium product exists");
@@ -369,10 +450,10 @@ test("the affiliate disclosure on the product page starts with the Amazon Associ
   assert.match(text, /As an Amazon Associate I earn from qualifying purchases\. If you buy through this link/);
 });
 
-test("the mobile bar carries the Amazon Associate sentence", async () => {
+test("every Buy button carries the Amazon Associate sentence: hero, sidebar and mobile bar", async () => {
   const text = await pageText(REAL_SLUG, "US");
   const occurrences = text.split("As an Amazon Associate I earn from qualifying purchases.").length - 1;
-  assert.equal(occurrences, 2, "once beside the sidebar button, once in the mobile bar");
+  assert.equal(occurrences, 3, "once beside the hero button, once beside the sidebar button, once in the mobile bar");
 });
 
 test("mobile sticky bar shows the product's brand and name", async () => {
@@ -441,4 +522,293 @@ test("GB magnesium page's 'rest of the program' list uses the UK creatine and L-
 test("US L-theanine page does carry claim words (so the GB check can fail)", async () => {
   const text = await pageText("pure-encapsulations-l-theanine", "US");
   assert.match(text, /relax|stress|calm|sleep|mood|focus/i);
+});
+
+// ---------------------------------------------------------------------------
+// Hero: a full-bleed header above the body, rendered for every pick in both countries.
+// ---------------------------------------------------------------------------
+
+test("hero shows the US magnesium name as its only h1", async () => {
+  assert.equal(await heroHeading(REAL_SLUG, "US"), "Magnesium Glycinate");
+});
+
+test("hero shows the US creatine name as its only h1", async () => {
+  assert.equal(await heroHeading("pure-encapsulations-creatine", "US"), "Creatine Monohydrate");
+});
+
+test("hero shows the US L-theanine name as its only h1", async () => {
+  assert.equal(await heroHeading("pure-encapsulations-l-theanine", "US"), "L-Theanine");
+});
+
+test("hero shows the GB magnesium name as its only h1", async () => {
+  assert.equal(await heroHeading(REAL_SLUG, "GB"), "Magnesium Glycinate");
+});
+
+test("hero shows the GB creatine name as its only h1", async () => {
+  assert.equal(await heroHeading("thorne-creatine", "GB"), "Creatine Monohydrate");
+});
+
+test("hero shows the GB L-theanine name as its only h1", async () => {
+  assert.equal(await heroHeading("pure-encapsulations-l-theanine", "GB"), "L-Theanine");
+});
+
+test("hero names the US magnesium brand as 'by Pure Encapsulations'", async () => {
+  assert.match(await heroText(REAL_SLUG, "US"), /by Pure Encapsulations/);
+});
+
+test("hero names the GB creatine brand as 'by Thorne'", async () => {
+  assert.match(await heroText("thorne-creatine", "GB"), /by Thorne/);
+});
+
+test("hero carries the US magnesium summary", async () => {
+  assert.match(
+    await heroText(REAL_SLUG, "US"),
+    /Single-ingredient magnesium glycinate, 120 mg a capsule, so you can build your dose up one capsule at a time\./,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Hero eyebrow: "{category} · {first goal label}", in the region's own wording.
+// ---------------------------------------------------------------------------
+
+test("hero eyebrow reads 'Magnesium · Energy' for the US magnesium", async () => {
+  assert.match(await heroText(REAL_SLUG, "US"), /Magnesium · Energy/);
+});
+
+test("hero eyebrow reads 'Creatine · Strength' for the US creatine", async () => {
+  assert.match(await heroText("pure-encapsulations-creatine", "US"), /Creatine · Strength/);
+});
+
+test("hero eyebrow uses the UK goal label 'Exercise' for the GB creatine", async () => {
+  assert.match(await heroText("thorne-creatine", "GB"), /Creatine · Exercise/);
+});
+
+test("hero eyebrow uses the UK goal label 'Evening' for the GB L-theanine", async () => {
+  assert.match(await heroText("pure-encapsulations-l-theanine", "GB"), /L-theanine · Evening/);
+});
+
+test("hero drops the goal photo and the goal name together when its supplement has no goal", async () => {
+  const index = goals.findIndex((g) => g.supplement === "magnesium");
+  assert.notEqual(index, -1, "fixture assumption: a goal serves magnesium");
+  const removed = goals[index];
+  goals.splice(index, 1);
+  try {
+    assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), []);
+    assert.equal(await heroHeading(REAL_SLUG, "US"), "Magnesium Glycinate");
+    assert.doesNotMatch(await heroText(REAL_SLUG, "US"), /·/);
+  } finally {
+    goals.splice(index, 0, removed);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Hero background: the goal photo, as a CSS background (decoration, not an <Image>).
+// ---------------------------------------------------------------------------
+
+test("hero background is the energy photo for the US magnesium pick", async () => {
+  assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), ["url(/healthy/goals/energy.jpg)"]);
+});
+
+test("hero background is the strength photo for the US creatine, not the focus photo", async () => {
+  assert.deepEqual(await heroBackgrounds("pure-encapsulations-creatine", "US"), ["url(/healthy/goals/strength.jpg)"]);
+});
+
+test("hero background is the strength photo for the GB creatine", async () => {
+  assert.deepEqual(await heroBackgrounds("thorne-creatine", "GB"), ["url(/healthy/goals/strength.jpg)"]);
+});
+
+test("hero background is the calm photo for the GB L-theanine", async () => {
+  assert.deepEqual(await heroBackgrounds("pure-encapsulations-l-theanine", "GB"), ["url(/healthy/goals/calm.jpg)"]);
+});
+
+// ---------------------------------------------------------------------------
+// Hero packshot: still the page's one next/image, with its note under it.
+// ---------------------------------------------------------------------------
+
+test("hero packshot is the US magnesium packshot", async () => {
+  assert.deepEqual(await heroImages(REAL_SLUG, "US"), [{ src: "/healthy/products/pure-encapsulations-magnesium-glycinate.png" }]);
+});
+
+test("hero packshot is the UK magnesium packshot for GB", async () => {
+  assert.deepEqual(await heroImages(REAL_SLUG, "GB"), [{ src: "/healthy/products/pure-encapsulations-magnesium-glycinate-uk.png" }]);
+});
+
+test("the US magnesium page has exactly one next/image, the packshot", async () => {
+  assert.deepEqual(await pageImages(REAL_SLUG, "US"), [{ src: "/healthy/products/pure-encapsulations-magnesium-glycinate.png" }]);
+});
+
+test("the GB L-theanine page has exactly one next/image, the UK packshot", async () => {
+  assert.deepEqual(await pageImages("pure-encapsulations-l-theanine", "GB"), [
+    { src: "/healthy/products/pure-encapsulations-l-theanine-uk.png" },
+  ]);
+});
+
+test("the US magnesium packshot note sits in the hero", async () => {
+  assert.match(await heroText(REAL_SLUG, "US"), /The photo shows the 30-capsule bottle\. The pack linked here is 90 capsules\./);
+});
+
+test("the GB magnesium hero shows no packshot note, because the UK pack has none", async () => {
+  assert.doesNotMatch(await heroText(REAL_SLUG, "GB"), /The photo shows/);
+});
+
+test("the hero packshot wrapper carries the animate-healthy-float class from globals.css", async () => {
+  const floats = (await heroClassNames(REAL_SLUG, "US")).filter((c) => c.split(" ").includes("animate-healthy-float"));
+  assert.equal(floats.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Hero fact chips: format, serving, servings, then the evidence badge only when there is evidence.
+// ---------------------------------------------------------------------------
+
+test("US magnesium chips are format, serving, servings and the grade", async () => {
+  assert.deepEqual(await heroChips(REAL_SLUG, "US"), ["Capsules", "Serving: 1 capsule", "90 servings", "Robust evidence"]);
+});
+
+test("US L-theanine chips end with its Promising evidence grade", async () => {
+  assert.deepEqual(await heroChips("pure-encapsulations-l-theanine", "US"), [
+    "Capsules",
+    "Serving: 2 capsules",
+    "30 servings",
+    "Promising evidence",
+  ]);
+});
+
+test("US creatine chips are format, serving, servings and the grade", async () => {
+  assert.deepEqual(await heroChips("pure-encapsulations-creatine", "US"), [
+    "Powder",
+    "Serving: 1.5 teaspoons (5 g)",
+    "60 servings",
+    "Robust evidence",
+  ]);
+});
+
+test("GB magnesium chips use the UK serving and servings count", async () => {
+  assert.deepEqual(await heroChips(REAL_SLUG, "GB"), ["Capsules", "Serving: 2 capsules", "45 servings", "Robust evidence"]);
+});
+
+test("GB creatine chips use the scoop serving and the grade", async () => {
+  assert.deepEqual(await heroChips("thorne-creatine", "GB"), ["Powder", "Serving: 1 scoop (5 g)", "90 servings", "Robust evidence"]);
+});
+
+test("GB L-theanine hero has no evidence badge: its chips stop at the servings count", async () => {
+  assert.deepEqual(await heroChips("pure-encapsulations-l-theanine", "GB"), ["Capsules", "Serving: 1 capsule", "60 servings"]);
+});
+
+test("GB L-theanine hero names no evidence grade", async () => {
+  assert.doesNotMatch(await heroText("pure-encapsulations-l-theanine", "GB"), /evidence/i);
+});
+
+test("GB L-theanine hero uses no claim words", async () => {
+  assert.doesNotMatch(await heroText("pure-encapsulations-l-theanine", "GB"), /relax|stress|calm|sleep|mood|focus|wind/i);
+});
+
+test("US L-theanine hero does carry a claim word, its Calm goal in the eyebrow (so the GB check can fail)", async () => {
+  assert.match(await heroText("pure-encapsulations-l-theanine", "US"), /L-theanine · Calm/);
+});
+
+test("hero shows no empty chip when servingSize and servingsPerContainer are both null", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-null-serving",
+    servingSize: null,
+    servingsPerContainer: null,
+    evidence: [],
+  };
+  products.push(fixture);
+  try {
+    assert.deepEqual(await heroChips("fixture-null-serving", "US"), ["Capsules"]);
+  } finally {
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+test("hero drops only the serving chip when servingSize is null and servings are known", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-null-serving-size",
+    servingSize: null,
+    evidence: [],
+  };
+  products.push(fixture);
+  try {
+    assert.deepEqual(await heroChips("fixture-null-serving-size", "US"), ["Capsules", "90 servings"]);
+  } finally {
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+test("hero shows no '0 servings' chip when servingsPerContainer is zero", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-zero-servings",
+    servingSize: null,
+    servingsPerContainer: 0,
+    evidence: [],
+  };
+  products.push(fixture);
+  try {
+    assert.deepEqual(await heroChips("fixture-zero-servings", "US"), ["Capsules"]);
+  } finally {
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Hero Buy link, its disclosure, and the links beside them.
+// ---------------------------------------------------------------------------
+
+test("hero Buy link goes straight to the US Amazon listing, not through /go", async () => {
+  const amazon = (await heroHrefs(REAL_SLUG, "US")).filter((h) => h.includes("amazon"));
+  assert.deepEqual(amazon, [US_MAGNESIUM_BUY]);
+});
+
+test("hero Buy link goes straight to the UK Amazon listing for GB", async () => {
+  const amazon = (await heroHrefs(REAL_SLUG, "GB")).filter((h) => h.includes("amazon"));
+  assert.deepEqual(amazon, [GB_MAGNESIUM_BUY]);
+});
+
+test("hero links are the breadcrumb, the Buy link, the research section and the routine, in that order", async () => {
+  assert.deepEqual(await heroHrefs(REAL_SLUG, "US"), ["/#picks", US_MAGNESIUM_BUY, "#research", "/routine"]);
+});
+
+test("hero has exactly one disclosure, and it is the full affiliate sentence", async () => {
+  const disclosures = (await heroHosts(REAL_SLUG, "US")).filter((el) => "data-affiliate-disclosure" in el.props);
+  assert.equal(disclosures.length, 1);
+  const out: string[] = [];
+  collectText(disclosures[0].props.children, out);
+  assert.equal(out.join(""), AFFILIATE_DISCLOSURE);
+});
+
+test("hero disclosure comes after the hero Buy link, not before it", async () => {
+  const hosts = await heroHosts(REAL_SLUG, "US");
+  const buyIndex = hosts.findIndex((el) => el.props.href === US_MAGNESIUM_BUY);
+  const disclosureIndex = hosts.findIndex((el) => "data-affiliate-disclosure" in el.props);
+  assert.ok(buyIndex >= 0, "the hero Buy link renders");
+  assert.ok(disclosureIndex >= 0, "the hero disclosure renders");
+  assert.ok(disclosureIndex > buyIndex, `disclosure at ${disclosureIndex} should follow the Buy link at ${buyIndex}`);
+});
+
+test("the hero's #research link lands on a research section that exists on the page", async () => {
+  assert.ok((await heroHrefs(REAL_SLUG, "US")).includes("#research"), "the hero links to #research");
+  const sections = (await pageHosts(REAL_SLUG, "US")).filter((el) => el.type === "section" && el.props.id === "research");
+  assert.equal(sections.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Brian's verdict moved out of the hero and into the body.
+// ---------------------------------------------------------------------------
+
+test("the verdict text is not in the hero but is in the body", async () => {
+  const verdict = (products.find((p) => p.slug === REAL_SLUG) as Product).verdict;
+  assert.equal((await heroText(REAL_SLUG, "US")).includes(verdict), false);
+  assert.equal((await pageText(REAL_SLUG, "US")).includes(verdict), true);
+});
+
+test("the body has a Brian's verdict section labelled by its heading", async () => {
+  const sections = (await pageHosts(REAL_SLUG, "US")).filter((el) => el.props["aria-labelledby"] === "verdict-heading");
+  assert.equal(sections.length, 1);
+  assert.equal(sections[0].type, "section");
 });

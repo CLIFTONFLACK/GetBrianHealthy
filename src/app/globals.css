@@ -194,6 +194,22 @@ textarea {
   animation: fade-in-up 700ms ease both;
 }
 
+/* Product hero packshot: a slow bob. Its resting frame is the packshot in
+   place, so the reduced-motion block below (one 0.01ms run) leaves it still. */
+@keyframes healthy-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-healthy-float {
+  animation: healthy-float 5s ease-in-out infinite;
+}
+
 .reveal {
   opacity: 0;
   transform: translateY(20px);
