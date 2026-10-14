@@ -264,8 +264,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           {/* slate-400, not 500: 500 on this background is 4.2:1, under the 4.5:1 AA floor. */}
           <div className="flex flex-col items-center justify-between gap-4 pt-6 text-sm text-slate-400 sm:flex-row">
             <p>
-              &copy; {new Date().getFullYear()} GetBrian. An independent project, not affiliated with
-              Human Longevity, Inc.
+              &copy; {new Date().getFullYear()} Brian. All rights reserved. An independent project,
+              not affiliated with Human Longevity, Inc.
             </p>
             <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
               <span>Re-checked every 6 months</span>
