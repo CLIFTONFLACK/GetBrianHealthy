@@ -9,3 +9,13 @@ export const siteUrl = "https://www.getbrianhealthy.xyz";
 
 /** The main GetBrian site, linked from the footer. */
 export const parentSiteUrl = "https://www.getbrian.xyz";
+
+/**
+ * Brian's social accounts, shown in the footer and on the About page. Only https
+ * links to the account pages themselves.
+ */
+export const socialLinks = [
+  { name: "Instagram", handle: "@getbrianhealthy", href: "https://www.instagram.com/getbrianhealthy/" },
+  { name: "TikTok", handle: "@getbrianhealthy", href: "https://www.tiktok.com/@getbrianhealthy" },
+  { name: "YouTube", handle: "@GetBrianHealthy", href: "https://www.youtube.com/@GetBrianHealthy" },
+] as const;

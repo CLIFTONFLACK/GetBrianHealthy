@@ -3,6 +3,7 @@ import { healthyOpenGraph } from "../layout";
 import Link from "next/link";
 import { PageHeading, Prose } from "../components";
 import { CONTACT_EMAIL, PROGRAM_NAME } from "../data";
+import { socialLinks } from "../site";
 
 const title = "About and contact";
 const description =
@@ -52,6 +53,18 @@ export default function AboutPage() {
             <p>
               Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We cannot give personal
               medical advice by email.
+            </p>
+            <p>
+              Follow Brian:{" "}
+              {socialLinks.map((s, i) => (
+                <span key={s.name}>
+                  {i > 0 ? ", " : ""}
+                  <a href={s.href} target="_blank" rel="noopener noreferrer">
+                    {s.name} {s.handle}
+                  </a>
+                </span>
+              ))}
+              .
             </p>
             <p>
               <Link href="/disclosures">Disclosures and disclaimers</Link>
