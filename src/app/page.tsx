@@ -7,6 +7,7 @@ import { PickLoop } from "./pick-loop";
 import { PromoVideo } from "./promo-video";
 import { JobRail } from "./job-rail";
 import { HealthyHeroMascot } from "./hero-mascot";
+import { HeroVideo } from "./hero-video";
 import { signupEnabled } from "./newsletter";
 import { Signup } from "./signup";
 import {
@@ -67,10 +68,10 @@ export default async function HealthyHome() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
       />
 
-      {/* HERO: the photo runs full-bleed behind the section on large screens,
-          feathered to white on the left so the lockup and copy read over it.
-          On small screens it sits as a band under the copy, feathered at the
-          top. One <Image> serves both, repositioned by breakpoint. On large
+      {/* HERO: the looping kitchen clip (hero-video.tsx) runs full-bleed behind
+          the section on large screens, feathered to white on the left so the
+          lockup and copy read over it. On small screens its 9:16 cut sits as a
+          band under the copy, feathered at the top. On large
           screens below 1544px the section pulls up over <main>'s pt-16 (the
           floating Menu's clearance) so the photo starts at the top of the page,
           and adds that 4rem back to its own padding to keep the copy clear. */}
@@ -133,19 +134,12 @@ export default async function HealthyHome() {
           </div>
         </div>
 
-        {/* The couple stand in the right half of the frame, so the crop anchors
-            right to keep both of them clear of the feathered side. On large
-            screens the wide section crops the photo vertically, so it also
-            anchors to the top to keep their heads in frame. */}
-        <div className="relative mt-16 h-72 sm:mt-10 sm:h-96 lg:absolute lg:inset-0 lg:mt-0 lg:h-auto">
-          <Image
-            src="/healthy/hero-couple-v2.jpg"
-            alt="A couple in their fifties hiking a coastal trail at sunrise"
-            fill
-            sizes="100vw"
-            className="animate-kinetic-hero-zoom object-cover object-right lg:origin-top lg:object-[right_top]"
-            priority
-          />
+        {/* The scene's left third is plain wall, so on large screens the copy
+            and the feather sit over nothing that matters. Below lg the band is
+            tall enough (26rem, 30rem from sm) that the 9:16 cut shows the
+            worktop and the glass, not a thin slice of wall. */}
+        <div className="relative mt-16 h-[26rem] sm:mt-10 sm:h-[30rem] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto">
+          <HeroVideo alt="A glass of water and a bowl of fruit on a kitchen worktop in morning light" />
           <div
             className="healthy-hero-feather absolute inset-0 bg-gradient-to-b from-white via-white/0 via-35% to-transparent"
             aria-hidden="true"
@@ -154,8 +148,12 @@ export default async function HealthyHome() {
               shadow instead, since a scrim there would grey the feathered copy side. */}
           <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-950/60 to-transparent lg:hidden" aria-hidden="true" />
           {/* left-36/left-64: below lg the mascot stands in the bottom-left of
-              this band, so the caption keeps clear of him and wraps sooner. */}
-          <p className="absolute right-4 bottom-4 left-36 text-right text-sm font-semibold text-white [text-shadow:0_1px_10px_rgba(2,6,23,0.75)] sm:right-6 sm:left-64 lg:left-4">
+              this band, so the caption keeps clear of him and wraps sooner.
+              right-16: the video's pause button (44px at right-4) sits in the
+              bottom-right corner at every width. From lg the mascot stands at
+              22.5rem (25rem from xl) in a 13.4rem box, so the caption starts
+              past him there too. */}
+          <p className="absolute right-16 bottom-4 left-36 text-right text-sm font-semibold text-white [text-shadow:0_1px_10px_rgba(2,6,23,0.75)] sm:right-[4.5rem] sm:left-64 lg:left-[37rem] xl:left-[40rem]">
             An active, evidence-checked routine for the decades ahead
           </p>
         </div>

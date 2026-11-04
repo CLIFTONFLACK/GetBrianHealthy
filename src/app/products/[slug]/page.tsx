@@ -101,9 +101,11 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
     url: `${siteUrl}/products/${product.slug}`,
   };
 
-  // The hero's photo is the goal this pick serves (the same photo as its home-page tile).
+  // The hero's photo is the product's own scene (data.ts heroImage), or, for a product without one,
+  // the goal this pick serves (the same photo as its home-page tile). The eyebrow names that goal.
   // It is a CSS background, not an <Image>: it is decoration, and the packshot stays the page's one image.
   const heroGoal = jobs[0];
+  const heroImage = product.heroImage ?? heroGoal?.image;
   const grade = topGrade(product);
   const facts = [
     product.format,
@@ -125,10 +127,10 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
           From 1544px the frosted side menu (layout.tsx) is on screen instead, and it only reads
           on a light page, so the band becomes a card inside the content column, clear of it. */}
       <header className="relative isolate overflow-hidden bg-slate-950 text-white -mt-16 min-[1544px]:mx-auto min-[1544px]:mt-8 min-[1544px]:max-w-6xl min-[1544px]:rounded-3xl">
-        {heroGoal && (
+        {heroImage && (
           <div
-            className="animate-kinetic-hero-zoom absolute inset-0 -z-20 bg-cover bg-center opacity-55"
-            style={{ backgroundImage: `url(${heroGoal.image})` }}
+            className="animate-kinetic-hero-zoom absolute inset-0 -z-20 bg-cover bg-center opacity-70"
+            style={{ backgroundImage: `url(${heroImage})` }}
             aria-hidden="true"
           />
         )}

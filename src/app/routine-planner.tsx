@@ -663,9 +663,11 @@ export function RoutinePlanner({
 
 /**
  * A step's looping clip. Plays muted while on screen and pauses off screen. Under reduced motion it
- * does not start by itself: the poster shows and the button plays it. The clip is 360 x 640 and has no audio.
+ * does not start by itself: the poster shows and the button plays it. The step clips are 360 x 640
+ * and have no audio. Exported for the /routine hero, which shows a 16:9 day clip in the same frame;
+ * the parent supplies the positioned box the video and its button fill.
  */
-function RoutineClip({ clip }: { clip: NonNullable<RoutineStep["clip"]> }) {
+export function RoutineClip({ clip }: { clip: NonNullable<RoutineStep["clip"]> }) {
   const ref = useRef<HTMLVideoElement>(null);
   const userPaused = useRef(false);
   const [playing, setPlaying] = useState(false);

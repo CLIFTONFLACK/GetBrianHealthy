@@ -587,13 +587,13 @@ test("hero eyebrow uses the UK goal label 'Evening' for the GB L-theanine", asyn
   assert.match(await heroText("pure-encapsulations-l-theanine", "GB"), /L-theanine · Evening/);
 });
 
-test("hero drops the goal photo and the goal name together when its supplement has no goal", async () => {
+test("hero drops the goal name but keeps the product's own photo when its supplement has no goal", async () => {
   const index = goals.findIndex((g) => g.supplement === "magnesium");
   assert.notEqual(index, -1, "fixture assumption: a goal serves magnesium");
   const removed = goals[index];
   goals.splice(index, 1);
   try {
-    assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), []);
+    assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), ["url(/healthy/hero/magnesium.jpg)"]);
     assert.equal(await heroHeading(REAL_SLUG, "US"), "Magnesium Glycinate");
     assert.doesNotMatch(await heroText(REAL_SLUG, "US"), /·/);
   } finally {
@@ -602,23 +602,82 @@ test("hero drops the goal photo and the goal name together when its supplement h
 });
 
 // ---------------------------------------------------------------------------
-// Hero background: the goal photo, as a CSS background (decoration, not an <Image>).
+// Hero background: the product's own photo (data.ts heroImage), as a CSS
+// background (decoration, not an <Image>). A product without one falls back
+// to the photo of the goal it serves, and to no photo when there is no goal.
 // ---------------------------------------------------------------------------
 
-test("hero background is the energy photo for the US magnesium pick", async () => {
-  assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), ["url(/healthy/goals/energy.jpg)"]);
+test("hero background is the magnesium scene for the US magnesium pick", async () => {
+  assert.deepEqual(await heroBackgrounds(REAL_SLUG, "US"), ["url(/healthy/hero/magnesium.jpg)"]);
 });
 
-test("hero background is the strength photo for the US creatine, not the focus photo", async () => {
-  assert.deepEqual(await heroBackgrounds("pure-encapsulations-creatine", "US"), ["url(/healthy/goals/strength.jpg)"]);
+test("hero background is the creatine scene for the US creatine, not a goal photo", async () => {
+  assert.deepEqual(await heroBackgrounds("pure-encapsulations-creatine", "US"), ["url(/healthy/hero/creatine.jpg)"]);
 });
 
-test("hero background is the strength photo for the GB creatine", async () => {
-  assert.deepEqual(await heroBackgrounds("thorne-creatine", "GB"), ["url(/healthy/goals/strength.jpg)"]);
+test("hero background is the same creatine scene for the GB creatine", async () => {
+  assert.deepEqual(await heroBackgrounds("thorne-creatine", "GB"), ["url(/healthy/hero/creatine.jpg)"]);
 });
 
-test("hero background is the calm photo for the GB L-theanine", async () => {
-  assert.deepEqual(await heroBackgrounds("pure-encapsulations-l-theanine", "GB"), ["url(/healthy/goals/calm.jpg)"]);
+test("hero background is the L-theanine scene for the GB L-theanine (the GB override inherits it)", async () => {
+  assert.deepEqual(await heroBackgrounds("pure-encapsulations-l-theanine", "GB"), ["url(/healthy/hero/l-theanine.jpg)"]);
+});
+
+test("hero background falls back to the goal photo for a product with no heroImage", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-no-hero-image",
+    heroImage: undefined,
+  };
+  products.push(fixture);
+  try {
+    assert.deepEqual(await heroBackgrounds("fixture-no-hero-image", "US"), ["url(/healthy/goals/energy.jpg)"]);
+  } finally {
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+test("hero has no background photo for a product with no heroImage and no goal", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-no-hero-image-no-goal",
+    heroImage: undefined,
+  };
+  products.push(fixture);
+  const index = goals.findIndex((g) => g.supplement === "magnesium");
+  assert.notEqual(index, -1, "fixture assumption: a goal serves magnesium");
+  const removed = goals[index];
+  goals.splice(index, 1);
+  try {
+    assert.deepEqual(await heroBackgrounds("fixture-no-hero-image-no-goal", "US"), []);
+  } finally {
+    goals.splice(index, 0, removed);
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+test("an empty heroImage string shows no photo and does not fall back to the goal photo (?? keeps the empty string)", async () => {
+  const fixture: Product = {
+    ...(products.find((p) => p.slug === REAL_SLUG) as Product),
+    slug: "fixture-empty-hero-image",
+    heroImage: "",
+  };
+  products.push(fixture);
+  try {
+    assert.deepEqual(await heroBackgrounds("fixture-empty-hero-image", "US"), []);
+  } finally {
+    const i = products.indexOf(fixture);
+    if (i !== -1) products.splice(i, 1);
+  }
+});
+
+test("the hero photo layer is dimmed, so the white copy and the grade badge still read over it", async () => {
+  const classes = await heroClassNames(REAL_SLUG, "US");
+  const photoLayer = classes.find((c) => c.includes("bg-cover"));
+  assert.ok(photoLayer, "expected the bg-cover photo layer in the hero");
+  assert.match(photoLayer!, /\bopacity-70\b/);
 });
 
 // ---------------------------------------------------------------------------

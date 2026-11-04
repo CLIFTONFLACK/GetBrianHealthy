@@ -17,7 +17,10 @@
  *                        out, for logo-animation.tsx to redraw them as SVG
  *   favicon-16.png, favicon-32.png, icon-512.png, apple-touch-icon.png
  *                        the mark on a white tile
- *   og-image.png         1200x630 share image
+ *   og-image.png         1200x630 share image (the mark on white; the fallback card)
+ *   og-home.jpg, og-routine.jpg, og-method.jpg
+ *                        1200x630 share cards for /, /routine and /method: the mark
+ *                        on a white tile over that page's photo, docs/og/<name>.jpg
  *
  * Why a 16px favicon when the masterbrand ships only 32: the root app/favicon.ico
  * is emitted on every route, /healthy included, declared as 48x48. Browsers
@@ -275,6 +278,37 @@ async function ogImage() {
     .toBuffer();
 }
 
+/**
+ * A share card with a photo: the page's scene (docs/og/<name>.jpg, already
+ * 1200x630) with the mark on a white rounded tile in the lower left, over the
+ * same teal base rule as og-image.png. The tile keeps the mark on white, which
+ * is the one ground it is drawn for (see the header comment). JPEG, because
+ * a photo at 1200x630 is about 1 MB as PNG and about 150 KB like this.
+ */
+const OG_PHOTO_DIR = path.join(root, "docs", "og");
+const OG_TILE = 220;
+const OG_MARGIN = 48;
+
+async function ogOverPhoto(name) {
+  const photo = path.join(OG_PHOTO_DIR, `${name}.jpg`);
+  const meta = await sharp(photo).metadata();
+  if (meta.width !== OG_W || meta.height !== OG_H) {
+    throw new Error(`${photo}: expected ${OG_W}x${OG_H}, got ${meta.width}x${meta.height}`);
+  }
+  const badge = await icon(OG_TILE);
+  const rule = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_W}" height="${OG_H}">` +
+      `<rect y="${OG_H - OG_RULE}" width="${OG_W}" height="${OG_RULE}" fill="${OG_TEAL}"/></svg>`
+  );
+  return sharp(photo)
+    .composite([
+      { input: rule, left: 0, top: 0 },
+      { input: badge, left: OG_MARGIN, top: OG_H - OG_RULE - OG_MARGIN - OG_TILE },
+    ])
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
+}
+
 // ----------------------------------------------------------------- write
 
 mkdirSync(OUT, { recursive: true });
@@ -303,6 +337,7 @@ record("favicon-32.png", await icon(32));
 record("icon-512.png", await icon(512));
 record("apple-touch-icon.png", await icon(180));
 record("og-image.png", await ogImage());
+for (const name of ["home", "routine", "method"]) record(`og-${name}.jpg`, await ogOverPhoto(name));
 
 const box = (b) => `${b.width}x${b.height} at (${b.left}, ${b.top})`;
 console.log(`display cut ${box(display.box)}, compact cut ${box(compact.box)}, of ${W}x${H}`);
