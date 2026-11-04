@@ -162,10 +162,19 @@ textarea {
   background: radial-gradient(circle at 60% 40%, rgba(2, 143, 150, 0.35), transparent 70%);
 }
 
-/* /healthy hero photo — a one-time settle-into-focus zoom on load, not a
+/* Product-page hero photo — a one-time settle-into-focus zoom on load, not a
    looping/continuous animation (those read as distracting on decorative
    imagery). Covered by the prefers-reduced-motion block below like every
-   other animation in this file. */
+   other animation in this file.
+
+   The home hero is the one exception to that one-time rule: since 4 Nov 2026
+   (owner's call) it is a silent 15 s kitchen clip that loops, served by
+   hero-video.tsx. It is gated the same way as the mascot footage: no video
+   under prefers-reduced-motion or Save-Data (the poster alone shows), it
+   pauses off screen, and a 44px pause button sits in its corner. The script
+   reads the preference once, on mount; the reduced-motion block below also
+   hides the <video> outright, so a preference switched on later still takes
+   the clip off screen (it keeps decoding until the page reloads). */
 @keyframes kinetic-hero-zoom {
   from {
     transform: scale(1.08);
@@ -223,8 +232,8 @@ textarea {
   transform: translateY(0);
 }
 
-/* /healthy hero photo, large screens: solid white to 35% of the viewport, where
-   the photo starts to show, then a fade to the photo. The copy column's real
+/* /healthy hero clip (and its poster), large screens: solid white to 35% of the
+   viewport, where the scene starts to show, then a fade to it. The copy column's real
    right edge (max-w-6xl container, sm:px-6 gutter, 36rem column) is
    max(37.5rem, 50vw + 1.5rem), so the right end of the copy sits on the early,
    still mostly white part of the fade; the stop there is held at 0.75 so the
@@ -836,6 +845,12 @@ textarea {
   /* The mascot stands still on its shadow. */
   .healthy-mascot * {
     animation: none !important;
+  }
+
+  /* The home hero shows its poster only: hero-video.tsx never mounts the
+     <video> under this preference, and this hides it if it ever is. */
+  .healthy-hero-video video {
+    display: none;
   }
 
   /* The shower rests: icons scattered down the column, mascot still, no bursts. */

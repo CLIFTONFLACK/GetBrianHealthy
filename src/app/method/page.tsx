@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { healthyOpenGraph } from "../layout";
+import { healthyOpenGraph, ogImages } from "../layout";
 import Link from "next/link";
 import { PageHeading, Prose } from "../components";
 import { gradeLabels, type EvidenceGrade } from "../data";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/method" },
-  openGraph: { ...healthyOpenGraph, title, description, url: "/method" },
+  openGraph: { ...healthyOpenGraph, title, description, url: "/method", images: [ogImages.method] },
 };
 
 const grades: EvidenceGrade[] = ["strong", "moderate", "early"];

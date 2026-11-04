@@ -10,7 +10,7 @@ The site earns money through Amazon Associates links. The tags are `getbrian-20`
 
 ## Stack
 
-- Next.js 16.2.10 (App Router), React 19.2.4, TypeScript
+- Next.js 16.2.12 (App Router), React 19.2.4, TypeScript
 - Tailwind CSS 4 (through `@tailwindcss/postcss`)
 - Vercel project `getbrianhealthy` in the team `clifton-ai-team`
 - No database. The email sign-up uses the Resend API (see Configuration).
@@ -48,9 +48,57 @@ All scripts are in `package.json`.
 | `npm start` | Runs `next start` on a production build. |
 | `npm run lint` | Runs `eslint`. |
 | `npm test` | Runs every `src/**/*.test.ts` and `src/**/*.test.tsx` file with `node --test`. It uses `--experimental-test-module-mocks` and the loader in `scripts/test-loader-register.mjs` and `scripts/test-loader.mjs`, which let Node import `.ts` and `.tsx` files directly. Only tests use the loader. The Next.js build does not. |
-| `npm run brand:healthy` | Runs `scripts/gen-healthy-brand.mjs`. It regenerates the favicons, app icons, share image and logo marks in `public/healthy/brand/` from `docs/GetBrian_Healthy_Logo.png`. It needs `sharp`, which is a dev dependency. |
+| `npm run brand:healthy` | Runs `scripts/gen-healthy-brand.mjs`. It regenerates the favicons, app icons, share image and logo marks in `public/healthy/brand/` from `docs/GetBrian_Healthy_Logo.png`. It also writes three photo share cards in the same folder: `og-home.jpg`, `og-routine.jpg` and `og-method.jpg`, built from `docs/og/home.jpg`, `docs/og/routine.jpg` and `docs/og/method.jpg` (each 1200x630). `og-image.png` stays the fallback card. It needs `sharp`, which is a dev dependency. |
 
 `scripts/healthy-mascot/cut.py` and `build.py` are not wired to any npm script. They build the mascot animation frames by hand (they use Pillow, and `build.py` expects ffmpeg output). Read the docstring at the top of `build.py` before you use them.
+
+## Media assets
+
+The home hero (`src/app/hero-video.tsx`) plays a silent looping clip. The `/routine` page plays its own clip. The product pages show a still. These files are committed. `npm run brand:healthy` does not rebuild them. Run the commands below from the repo root when you replace a clip or a still.
+
+The hero never plays under reduced motion or Save-Data. Those visitors get the poster alone.
+
+### Clips
+
+Each clip is one encode. Its last 0.5 s crossfades into a frozen copy of frame 1, so the clip loops without a seam. The encode is YUV with no audio. The file is tagged bt709 and has `moov` first.
+
+Set `IN` to the raw take, `OUT` to the file under `public/healthy/video/`, and `OFF` to the take's duration minus 0.5. Read the duration with `ffprobe -v error -show_entries format=duration -of csv=p=0 IN`.
+
+| Clip | IN (raw take, in the git-ignored `output` folder outside this repo) | OUT | Changes to the command |
+| --- | --- | --- | --- |
+| Home, 16:9 | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E1_home_hero_16x9.mp4` | `public/healthy/video/home-hero-16x9.mp4` | None. Uses the values below. |
+| Home, 9:16 | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E3_home_hero_9x16.mp4` | `public/healthy/video/home-hero-9x16.mp4` | `-maxrate 1600k` instead of `2000k`. |
+| `/routine` | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E2_routine_loop_16x9.mp4` | `public/healthy/video/routine-day.mp4` | Adds `scale=1280:720:flags=lanczos,` before `split` in the filter graph, and `-maxrate 1200k` instead of `2000k`. |
+
+The first command encodes the clip. The second command writes `OUT.tagged.mp4`, a copy with the colour tags written into the H.264 stream itself (the first command only sets the container tags). Rename the tagged copy over `OUT`; that is the file the site serves.
+
+```powershell
+ffmpeg -y -i IN -an -filter_complex "[0:v]split=2[main][b];[b]trim=end_frame=1,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.5[first];[main][first]xfade=transition=fade:duration=0.5:offset=OFF,format=yuv420p[v]" -map "[v]" -r 24 -c:v libx264 -preset slow -crf 23 -maxrate 2000k -bufsize 4000k -color_primaries bt709 -color_trc bt709 -colorspace bt709 -movflags +faststart OUT
+ffmpeg -y -i OUT -c copy -bsf:v h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0 -color_primaries bt709 -color_trc bt709 -colorspace bt709 -movflags +faststart OUT.tagged.mp4
+```
+
+### Posters
+
+Each poster is frame 1 of its encoded clip. Run these after the clip is in place under `public/healthy/video/`. The widths match the clips: 1600 px for the 16:9 home cut, 810 px for the 9:16 home cut and 1280 px for the `/routine` clip.
+
+```powershell
+ffmpeg -y -i public/healthy/video/home-hero-16x9.mp4 -frames:v 1 -vf "scale=1600:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/home-hero-16x9-poster.webp
+ffmpeg -y -i public/healthy/video/home-hero-9x16.mp4 -frames:v 1 -vf "scale=810:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/home-hero-9x16-poster.webp
+ffmpeg -y -i public/healthy/video/routine-day.mp4 -frames:v 1 -vf "scale=1280:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/routine-day-poster.webp
+```
+
+### Stills
+
+There is no npm script for the stills. They came from a one-off Node script that uses `sharp`, a dev dependency. The script reads the raw PNGs (`S1.png` to `S6.png`) from the same raw folder as the clips and writes one JPEG for each:
+
+- `S1`, `S2`, `S3` to `public/healthy/hero/magnesium.jpg`, `creatine.jpg` and `l-theanine.jpg`: 1600 px wide, JPEG quality 80, mozjpeg. These are the `heroImage` values in `src/app/data.ts`.
+- `S4`, `S5`, `S6` to `docs/og/home.jpg`, `routine.jpg` and `method.jpg`: 1200x630, cover fit, JPEG quality 90. These are the share-card sources.
+
+After you change the share-card sources in `docs/og/`, run `npm run brand:healthy` to write the share cards.
+
+### Tests
+
+The tests in `src/app/__tests__/hero-video.test.tsx` and `src/app/__tests__/routine-hero-clip.test.tsx` use ffmpeg to check each clip for a loop seam and for no audio stream, and the home posters against frame 1, and they skip those checks when `ffmpeg` is not on PATH.
 
 ## Configuration
 
@@ -101,8 +149,11 @@ src/app/
   sitemap.ts, robots.ts             /sitemap.xml and /robots.txt
   __tests__/                        tests (more under go/, products/, why-these-picks/)
 public/healthy/                     static assets
+  video/                            home hero and /routine clips, with posters
+  hero/                             product-page hero stills
 scripts/                            brand generator, test loader, mascot tools
 docs/GetBrian_Healthy_Logo.png      source image for brand:healthy
+docs/og/                            share-card source photos for brand:healthy
 ```
 
 Static assets keep the `public/healthy/` prefix on purpose. Their URLs are `/healthy/brand/...`, `/healthy/products/...` and so on, and the code, metadata and tests all refer to those paths.
@@ -172,5 +223,5 @@ Before you push, check which GitHub account is active (`gh auth switch --user CL
 | A UK visitor sees the US page, or the other way round. | Check for a stale `hl-region` cookie, which overrides detection. Locally there is no `x-vercel-ip-country` header, so you always get `US` unless the cookie says otherwise. Use the footer switch. |
 | One country sees the other's content in production. | A page or route has been made static or cached. Remove `force-static`, `revalidate` or `use cache`. |
 | `npm install` fails or hangs. | You are on the Google Drive volume (`G:`). Move to local disk. |
-| `npm run brand:healthy` fails. | It needs `sharp` installed (`npm install`) and `docs/GetBrian_Healthy_Logo.png`. It also throws if the logo has no pixels above its alpha threshold. |
+| `npm run brand:healthy` fails. | It needs `sharp` installed (`npm install`), `docs/GetBrian_Healthy_Logo.png`, and `docs/og/home.jpg`, `routine.jpg` and `method.jpg`. Each photo must be exactly 1200x630, or the script throws. It also throws if the logo has no pixels above its alpha threshold. |
 | `/go/<slug>` returns 404. | Expected for every current product. See "Buy links". |

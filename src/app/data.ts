@@ -57,6 +57,8 @@ export type Product = {
   imageAlt: string;
   /** Shown under the packshot when it differs from the pack linked (for example, a smaller bottle). */
   imageNote?: string;
+  /** Photo behind the product page's dark hero. Falls back to the first goal's photo when unset. Path under /public. */
+  heroImage?: string;
   /** One line for cards. */
   summary: string;
   verdict: string;
@@ -589,6 +591,7 @@ export const products: Product[] = [
     image: "/healthy/products/pure-encapsulations-magnesium-glycinate.png",
     imageAlt: "Bottle of Pure Encapsulations magnesium glycinate capsules",
     imageNote: "The photo shows the 30-capsule bottle. The pack linked here is 90 capsules.",
+    heroImage: "/healthy/hero/magnesium.jpg",
     summary: "Single-ingredient magnesium glycinate, 120 mg a capsule, so you can build your dose up one capsule at a time.",
     verdict:
       "Magnesium glycinate at 120 mg per capsule with no blend, so the label can be checked against what the research studied. Costs more per milligram than a bulk powder.",
@@ -664,6 +667,7 @@ export const products: Product[] = [
     category: "Creatine",
     format: "Powder",
     image: "/healthy/products/pure-encapsulations-creatine.png",
+    heroImage: "/healthy/hero/creatine.jpg",
     imageAlt: "Tub of Pure Encapsulations creatine powder, 315 g",
     summary: "Plain creatine monohydrate powder, 5 g a serving, 60 servings a tub.",
     verdict:
@@ -709,6 +713,7 @@ export const products: Product[] = [
     category: "Creatine",
     format: "Powder",
     image: "/healthy/products/thorne-creatine.png",
+    heroImage: "/healthy/hero/creatine.jpg",
     imageAlt: "Tub of Thorne creatine powder, 450 g",
     summary: "Micronised creatine monohydrate powder, 5 g a serving, 90 servings a tub, NSF Certified for Sport.",
     verdict:
@@ -755,6 +760,7 @@ export const products: Product[] = [
     category: "L-theanine",
     format: "Capsules",
     image: "/healthy/products/pure-encapsulations-l-theanine.png",
+    heroImage: "/healthy/hero/l-theanine.jpg",
     imageAlt: "Bottle of Pure Encapsulations L-theanine capsules",
     summary: "200 mg of L-theanine a capsule, in the branded Suntheanine form, 60 capsules a bottle.",
     verdict:

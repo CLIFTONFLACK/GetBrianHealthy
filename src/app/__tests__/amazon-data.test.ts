@@ -355,6 +355,27 @@ test("every packshot a product can show exists under public/", async () => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Hero stills (the photo behind each product page's dark hero)
+// ---------------------------------------------------------------------------
+
+test("every hero still a product page can show exists under public/", async () => {
+  const { existsSync } = await import("node:fs");
+  const { resolve } = await import("node:path");
+  const shown = REGIONS.flatMap((r) => productsFor(r)).filter((p) => p.heroImage !== undefined);
+  assert.ok(shown.length >= 4, "the real data must have hero stills, or this check is vacuous");
+  for (const p of shown) {
+    assert.match(p.heroImage!, /^\/healthy\/hero\/[a-z-]+\.jpg$/, `${p.slug}: hero still path ${p.heroImage}`);
+    assert.ok(existsSync(resolve("public", `.${p.heroImage}`)), `${p.slug}: missing ${p.heroImage}`);
+  }
+});
+
+test("both creatine picks share one hero still, and each ingredient has its own", () => {
+  assert.equal(getProductFor("pure-encapsulations-creatine", "US")!.heroImage, getProductFor("thorne-creatine", "GB")!.heroImage);
+  const stills = new Set(["pure-encapsulations-magnesium-glycinate", "thorne-creatine", "pure-encapsulations-l-theanine"].map((slug) => getProductFor(slug, "GB")!.heroImage));
+  assert.equal(stills.size, 3, "magnesium, creatine and L-theanine must each have a different hero still");
+});
+
 test("UK visitors get the UK-label bottle photo, never the US one, whose label carries US health claims", () => {
   for (const slug of ["pure-encapsulations-magnesium-glycinate", "pure-encapsulations-l-theanine"]) {
     const us = getProductFor(slug, "US")!.image;

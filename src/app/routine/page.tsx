@@ -3,13 +3,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { FdaDisclaimer } from "../components";
 import { Icon } from "../icons";
-import { healthyOpenGraph } from "../layout";
+import { healthyOpenGraph, ogImages } from "../layout";
 import { PromoVideo } from "../promo-video";
 import { getRegion } from "../region-server";
-import { RoutinePlanner } from "../routine-planner";
+import { RoutineClip, RoutinePlanner } from "../routine-planner";
 import { allSteps, pickOptions } from "../routine";
 
 const TITLE = "Daily routine";
+
+/** The hero's silent day clip (three slow shots: a kitchen, a home gym, an armchair). Loops. */
+const HERO_CLIP = {
+  src: "/healthy/video/routine-day.mp4",
+  poster: "/healthy/video/routine-day-poster.webp",
+  label: "A day at home: a glass of water in the kitchen, a home gym, an armchair in the evening",
+};
 const DESCRIPTION =
   "A one-page daily routine from GetBrian Healthy: a walk, a strength session, a wind-down and the supplement picks you choose. Tick it off online or print it for the fridge.";
 
@@ -17,7 +24,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/routine" },
-  openGraph: { ...healthyOpenGraph, title: TITLE, description: DESCRIPTION, url: "/routine" },
+  openGraph: { ...healthyOpenGraph, title: TITLE, description: DESCRIPTION, url: "/routine", images: [ogImages.routine] },
 };
 
 /** What the printed sheet carries in place of the page's footer. */
@@ -35,7 +42,8 @@ export default async function RoutinePage() {
     <>
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-3 pb-12 sm:pt-10 sm:pb-16 print:hidden">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-[1fr_auto]">
+        {/* Copy beside the day clip from lg; below lg the card stacks under the copy. */}
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_30rem]">
           <div className="animate-fade-in-up space-y-5">
             <span className="block text-xs font-extrabold tracking-widest text-kinetic-primary-electric uppercase">Brian&apos;s daily routine</span>
             <h1 className="font-kinetic-heading text-4xl leading-[1.05] font-extrabold tracking-tight text-kinetic-primary text-balance sm:text-6xl">
@@ -61,15 +69,23 @@ export default async function RoutinePage() {
               </Link>
             </div>
           </div>
-          <Image
-            src="/healthy/mascot/hero-wave.webp"
-            alt="Brian's assistant, the GetBrian Healthy mascot, waving"
-            width={336}
-            height={320}
-            unoptimized
-            priority
-            className="mx-auto h-auto w-56 sm:w-72"
-          />
+          {/* The clip card, with the mascot standing over its bottom-left corner. The card is
+              the positioned box RoutineClip fills; the mascot sits outside it, so the card's
+              rounded clip does not cut him, and pb/pl make room for his overhang. */}
+          <div className="relative pb-6 pl-4 sm:pl-8">
+            <div className="relative aspect-video overflow-hidden rounded-3xl bg-slate-950 shadow-[0_0_0_6px_rgba(78,177,182,0.25),0_24px_48px_rgba(2,6,23,0.25)]">
+              <RoutineClip clip={HERO_CLIP} />
+            </div>
+            <Image
+              src="/healthy/mascot/hero-wave.webp"
+              alt="Brian's assistant, the GetBrian Healthy mascot, waving"
+              width={336}
+              height={320}
+              unoptimized
+              priority
+              className="absolute bottom-0 left-0 z-10 h-auto w-36 sm:w-44"
+            />
+          </div>
         </div>
       </section>
 
