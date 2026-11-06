@@ -29,7 +29,7 @@ type El = { type: unknown; props: Record<string, unknown> };
 type GuideMeta = { title?: unknown; description?: unknown; openGraph?: { images?: unknown } };
 
 let GuidePage: () => Promise<unknown>;
-let generateMetadataFn: () => Promise<unknown>;
+let metadata: GuideMeta;
 let GuideSignup: unknown;
 let currentRegion: Region = "US";
 /** Component types the walker must not call: they are leaves for this test. */
@@ -47,7 +47,7 @@ test.before(async () => {
   });
   const page = await import("../page.tsx");
   GuidePage = page.default as unknown as () => Promise<unknown>;
-  generateMetadataFn = page.generateMetadata as unknown as () => Promise<unknown>;
+  metadata = page.metadata as GuideMeta;
   ({ GuideSignup } = await import("../guide-signup.tsx"));
   leafTypes = [Link, Image, Icon, GuideSignup];
 });
@@ -139,16 +139,11 @@ function countMarker(tree: unknown, marker: string): number {
   return elements(tree).filter((el) => el.props[marker] === true).length;
 }
 
-async function metadataFor(region: Region): Promise<GuideMeta> {
-  currentRegion = region;
-  return (await generateMetadataFn()) as GuideMeta;
-}
-
 // ---------------------------------------------------------------------------
-// Sanity: the walk reaches the copy the absence checks below depend on
+// Sanity: the walk reaches the page copy
 // ---------------------------------------------------------------------------
 
-test("sanity: the US page text names magnesium, creatine and L-theanine, so the GB absence check cannot pass vacuously", async () => {
+test("sanity: the page text names magnesium, creatine and L-theanine", async () => {
   const tree = await renderPage("US", true);
   assert.match(text(tree), /magnesium/i);
   assert.match(text(tree), /creatine/i);
@@ -159,63 +154,47 @@ test("sanity: the US page text names magnesium, creatine and L-theanine, so the 
 // Sign-up form: shown only when the guide list is configured
 // ---------------------------------------------------------------------------
 
-test("a US visitor sees the sign-up form when the guide list is configured", async () => {
+test("the sign-up form shows when the guide list is configured", async () => {
   const tree = await renderPage("US", true);
   assert.equal(countType(tree, GuideSignup), 1);
   assert.equal(countMarker(tree, "data-guide-closed"), 0);
 });
 
-test("a US visitor sees the closed notice, and no form, when the guide list is not configured", async () => {
+test("the closed notice, and no form, shows when the guide list is not configured", async () => {
   const tree = await renderPage("US", false);
   assert.equal(countType(tree, GuideSignup), 0);
   assert.equal(countMarker(tree, "data-guide-closed"), 1);
 });
 
 // ---------------------------------------------------------------------------
-// GB: no form and no claim words, even when the guide list is configured
+// One global guide: a GB visitor gets exactly what a US visitor gets
 // ---------------------------------------------------------------------------
 
-test("a GB visitor never sees the sign-up form, even when the guide list is configured", async () => {
+test("a GB visitor sees the sign-up form and the guide copy, the same as a US visitor", async () => {
   const tree = await renderPage("GB", true);
-  assert.equal(countType(tree, GuideSignup), 0);
+  assert.equal(countType(tree, GuideSignup), 1);
+  assert.match(text(tree), /L-theanine/i);
+  assert.equal(text(tree), text(await renderPage("US", true)));
 });
 
-test("a GB visitor gets the UK note", async () => {
+test("the page text names no country", async () => {
   const tree = await renderPage("GB", true);
-  assert.equal(countMarker(tree, "data-guide-gb"), 1);
-});
-
-test("GB page text contains none of magnesium, creatine, theanine or stress", async () => {
-  const tree = await renderPage("GB", true);
-  assert.doesNotMatch(text(tree), /magnesium|creatine|theanine|stress/i);
+  assert.doesNotMatch(text(tree), /\bUK\b|United Kingdom|Great Britain|\bUS\b|United States/);
 });
 
 // ---------------------------------------------------------------------------
-// Metadata: the title and description follow the region
+// Metadata: one title, description and share card for everyone
 // ---------------------------------------------------------------------------
 
-test("the GB title is the neutral 'Free guide'", async () => {
-  const meta = await metadataFor("GB");
-  assert.equal(meta.title, "Free guide");
+test("the title names the guide", () => {
+  assert.equal(metadata.title, "Free guide: Energy. Strength. Calm.");
 });
 
-test("the US title names the guide", async () => {
-  const meta = await metadataFor("US");
-  assert.equal(meta.title, "Free guide: Energy. Strength. Calm.");
+test("the description names no country", () => {
+  assert.equal(typeof metadata.description, "string");
+  assert.doesNotMatch(String(metadata.description), /\bUK\b|\bUS\b|United|Britain/);
 });
 
-test("the GB description carries none of the claim words", async () => {
-  const meta = await metadataFor("GB");
-  assert.equal(typeof meta.description, "string");
-  assert.doesNotMatch(String(meta.description), /magnesium|creatine|theanine|stress|energy|strength|calm|focus|sleep/i);
-});
-
-test("the GB share card is the site-wide mark card, not the guide card", async () => {
-  const gb = await metadataFor("GB");
-  assert.deepEqual(gb.openGraph?.images, [MARK_CARD]);
-});
-
-test("the US share card is the guide card", async () => {
-  const us = await metadataFor("US");
-  assert.deepEqual(us.openGraph?.images, [GUIDE_CARD]);
+test("the share card is the guide card", () => {
+  assert.deepEqual(metadata.openGraph?.images, [GUIDE_CARD]);
 });

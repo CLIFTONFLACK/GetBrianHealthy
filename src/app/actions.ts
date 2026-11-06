@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getRegion } from "./region-server";
 import { siteUrl } from "./site";
 import { addContact, normalizeEmail, readConfiguredToken, sendConfirmation, sendGuide, type List } from "./newsletter";
 
@@ -32,12 +31,10 @@ export async function subscribe(_prev: SignupState, formData: FormData): Promise
 }
 
 /**
- * The free-guide form on /guide. The list is fixed here, never read from the
- * form. The guide makes claims not authorised in Great Britain, so a UK
- * visitor is refused here too, not only by the page hiding the form.
+ * The free-guide form on /guide, open to every country. The list is fixed
+ * here, never read from the form.
  */
 export async function requestGuide(_prev: SignupState, formData: FormData): Promise<SignupState> {
-  if ((await getRegion()) === "GB") return { status: "error" };
   return requestConfirmation(formData, "guide");
 }
 
