@@ -133,8 +133,8 @@ test("the home hero keeps its own object-position by default (the prop must not 
   assert.match(source, /fit = "object-\[center_60%\] lg:object-center",/);
 });
 
-test("the method page clip: files exist, the query is Tailwind sm, and the page passes all four props", () => {
-  assert.equal(METHOD_QUERY, "(min-width: 40rem)");
+test("the method page clip: files exist, the query is Tailwind lg, and the page passes all four props", () => {
+  assert.equal(METHOD_QUERY, "(min-width: 64rem)");
   const publicDir = path.resolve(testDir, "../../../public");
   for (const cut of [METHOD_VIDEO.wide, METHOD_VIDEO.tall]) {
     for (const url of [cut.src, cut.poster]) {
@@ -144,7 +144,8 @@ test("the method page clip: files exist, the query is Tailwind sm, and the page 
   const methodSource = readFileSync(path.resolve(testDir, "../method/page.tsx"), "utf8");
   assert.match(methodSource, /video=\{METHOD_VIDEO\}/);
   assert.match(methodSource, /query=\{METHOD_QUERY\}/);
-  assert.match(methodSource, /sm:aspect-\[4\/3\]/);
+  // Full-bleed from lg, where the cut swaps: the video box must go absolute at the same breakpoint.
+  assert.match(methodSource, /lg:absolute lg:inset-0/);
 });
 
 test("the clip is remounted when the cut changes (HeroClip keyed on mode), so its flags start over", () => {
