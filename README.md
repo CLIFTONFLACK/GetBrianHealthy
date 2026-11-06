@@ -54,20 +54,77 @@ All scripts are in `package.json`.
 
 ## Media assets
 
-The home hero (`src/app/hero-video.tsx`) plays a silent looping clip. The `/routine` page plays its own clip. The product pages show a still. These files are committed. `npm run brand:healthy` does not rebuild them. Run the commands below from the repo root when you replace a clip or a still.
+The home hero (`src/app/hero-video.tsx`) plays a silent looping clip of three scenes. The `/method` page plays a second clip, "How Brian decides". The `/routine` page plays its own clip. The product pages show a still. These files are committed. `npm run brand:healthy` does not rebuild them. Run the commands below from the repo root when you replace a clip or a still. The home hero build is the exception: it runs from the `hero-data` folder outside the repo.
 
 The hero never plays under reduced motion or Save-Data. Those visitors get the poster alone.
 
-### Clips
+### Home hero
 
-Each clip is one encode. Its last 0.5 s crossfades into a frozen copy of frame 1, so the clip loops without a seam. The encode is YUV with no audio. The file is tagged bt709 and has `moov` first.
+The home hero has two cuts. The 16:9 cut shows from `lg` (64rem) up. The square cut shows below it. `HERO_VIDEO` in `src/app/hero-video.tsx` names the files:
+
+| File in `public/healthy/video/` | Size | Used |
+| --- | --- | --- |
+| `home-hero-v2-16x9.mp4` | 1920x1080 | From `lg` up. Full-bleed behind the copy. |
+| `home-hero-v2-16x9-poster.webp` | 1600x900 | Poster for the 16:9 cut. |
+| `home-hero-v2-1x1.mp4` | 1080x1080 | Below `lg`. A square crop around each scene's subject. |
+| `home-hero-v2-1x1-poster.webp` | 810x810 | Poster for the square cut. |
+
+The first version used `home-hero-16x9.mp4` and `home-hero-9x16.mp4`. Those files are no longer in the repo.
+
+The clip is a silent loop of three scenes. A small chip in the corner names each scene:
+
+| Scene | Chip | Source take | Start in take | Frames used |
+| --- | --- | --- | --- | --- |
+| Strength: a home gym | `1 Strength` | `E2_routine_loop_16x9.mp4` | 6.6 s | 50 |
+| Focus: a desk by a window | `2 Focus` | `H1_focus_desk_16x9.mp4` | 0 s | 124 |
+| Calm: an armchair, a lamp, a mug at night | `3 Calm` | `E2_routine_loop_16x9.mp4` | 9.3 s | 132 |
+
+Each scene fades into the next over 12 frames (0.5 s). The loop is 282 frames, 11.75 s, at 24 fps. At the end, it dissolves back to frame 1, so the loop has no seam. Frame 1 shows the `1 Strength` chip, so the poster shows it too.
+
+The takes are in `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\`. The build script is `build_hero_v2.py` in `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\hero-data\`. Both folders sit in the `output` folder, outside this repo. `H1b_focus_desk_alt_16x9.mp4` in the raw folder is an unused alternative Focus take. The script does not read it.
+
+The takes must be 1920x1080. The build reads raw frames of that size. It stops with `ended early at frame N` if a take runs out before a scene is done.
+
+Run these from the `hero-data` folder. `build_hero.py` must stay beside `build_hero_v2.py`, because the build imports it.
+
+```powershell
+python build_hero_v2.py wide --frames 0,80,200,300
+python build_hero_v2.py wide --full
+python build_hero_v2.py square --full
+```
+
+The first command writes PNG previews to `out\preview-v2-wide\`. Check them before you encode. Each `--full` command encodes one cut and writes its poster to `out\`:
+
+- `wide --full` writes `out\home-hero-v2-16x9.mp4` and `out\home-hero-v2-16x9-poster.webp`.
+- `square --full` writes `out\home-hero-v2-1x1.mp4` and `out\home-hero-v2-1x1-poster.webp`.
+
+The script does not copy the files into the repo. Copy all four into `public\healthy\video\`.
+
+Each encode uses libx264 with `-preset slow`, `-crf 24` (set another value with `--crf`), a GOP of 48 frames and no audio. It writes the bt709 colour tags into the H.264 stream in the same encode, and it sets `+faststart`. There is no separate tagged-copy step. Do not use the ffmpeg commands under "Routine clip" for these files.
+
+The poster is frame 1 of the composed frame, written before encoding. The hero test checks that the poster matches frame 1 of the mp4, with a mean channel difference under 12.
+
+The square cut centres each scene on its subject. The crop centres are x = 960, 1300 and 900 of the 1920 px frame.
+
+The build needs these:
+
+- Python with Pillow and numpy. `build_hero.py` imports both. `build_hero_v2.py` imports Pillow and uses `build_hero.py`.
+- `ffmpeg` on PATH.
+- Google Chrome at `C:\Program Files\Google\Chrome\Application\chrome.exe`. `build_hero.py` has this path hard-coded. Chrome draws the chips.
+- Internet access on the first run. The chip page loads the site fonts from Google Fonts. The chips are then cached in `out\pieces-scenes-wide\` and `out\pieces-scenes-square\`. Delete a cache folder to draw its chips again.
+
+### Method clip
+
+The `/method` clip ("How Brian decides") uses the `method-data-*` files named by `METHOD_VIDEO` in `hero-video.tsx`. `build_hero.py` makes the panel over the kitchen takes (`E1_home_hero_16x9.mp4` and `E3_home_hero_9x16.mp4`). It writes `home-hero-data-16x9.mp4` and `home-hero-data-9x16.mp4`, not the `method-data-*` names, so rename the files when you copy them into `public\healthy\video\`. Any crop of those files is made with ffmpeg and is not in the script.
+
+### Routine clip
+
+The `/routine` clip is one encode. Its last 0.5 s crossfades into a frozen copy of frame 1, so the clip loops without a seam. The encode is YUV with no audio. The file is tagged bt709 and has `moov` first.
 
 Set `IN` to the raw take, `OUT` to the file under `public/healthy/video/`, and `OFF` to the take's duration minus 0.5. Read the duration with `ffprobe -v error -show_entries format=duration -of csv=p=0 IN`.
 
-| Clip | IN (raw take, in the git-ignored `output` folder outside this repo) | OUT | Changes to the command |
+| Clip | IN (raw take, in the `output` folder outside this repo) | OUT | Changes to the command |
 | --- | --- | --- | --- |
-| Home, 16:9 | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E1_home_hero_16x9.mp4` | `public/healthy/video/home-hero-16x9.mp4` | None. Uses the values below. |
-| Home, 9:16 | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E3_home_hero_9x16.mp4` | `public/healthy/video/home-hero-9x16.mp4` | `-maxrate 1600k` instead of `2000k`. |
 | `/routine` | `G:\My Drive\CLAUDE\Ai-projects-BRIAN\GetBrian-Healthy\output\Site-assets\openart\raw\E2_routine_loop_16x9.mp4` | `public/healthy/video/routine-day.mp4` | Adds `scale=1280:720:flags=lanczos,` before `split` in the filter graph, and `-maxrate 1200k` instead of `2000k`. |
 
 The first command encodes the clip. The second command writes `OUT.tagged.mp4`, a copy with the colour tags written into the H.264 stream itself (the first command only sets the container tags). Rename the tagged copy over `OUT`; that is the file the site serves.
@@ -79,11 +136,9 @@ ffmpeg -y -i OUT -c copy -bsf:v h264_metadata=colour_primaries=1:transfer_charac
 
 ### Posters
 
-Each poster is frame 1 of its encoded clip. Run these after the clip is in place under `public/healthy/video/`. The widths match the clips: 1600 px for the 16:9 home cut, 810 px for the 9:16 home cut and 1280 px for the `/routine` clip.
+The `/routine` poster is frame 1 of its encoded clip. Run this after the clip is in place under `public/healthy/video/`. The width is 1280 px. The home hero posters come from the build script, in the Home hero section.
 
 ```powershell
-ffmpeg -y -i public/healthy/video/home-hero-16x9.mp4 -frames:v 1 -vf "scale=1600:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/home-hero-16x9-poster.webp
-ffmpeg -y -i public/healthy/video/home-hero-9x16.mp4 -frames:v 1 -vf "scale=810:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/home-hero-9x16-poster.webp
 ffmpeg -y -i public/healthy/video/routine-day.mp4 -frames:v 1 -vf "scale=1280:-2:in_color_matrix=bt709" -c:v libwebp -quality 80 public/healthy/video/routine-day-poster.webp
 ```
 
@@ -149,7 +204,7 @@ src/app/
   sitemap.ts, robots.ts             /sitemap.xml and /robots.txt
   __tests__/                        tests (more under go/, products/, why-these-picks/)
 public/healthy/                     static assets
-  video/                            home hero and /routine clips, with posters
+  video/                            home hero, /method and /routine clips, with posters
   hero/                             product-page hero stills
 scripts/                            brand generator, test loader, mascot tools
 docs/GetBrian_Healthy_Logo.png      source image for brand:healthy

@@ -51,8 +51,9 @@ test("heroVideoMode treats a missing saveData as off", () => {
 
 test("HERO_VIDEO names the two cuts and their posters under /healthy/video", () => {
   assert.deepEqual(HERO_VIDEO, {
-    wide: { src: "/healthy/video/home-hero-16x9.mp4", poster: "/healthy/video/home-hero-16x9-poster.webp", width: 1920, height: 1080 },
-    tall: { src: "/healthy/video/home-hero-9x16.mp4", poster: "/healthy/video/home-hero-9x16-poster.webp", width: 1080, height: 1920 },
+    wide: { src: "/healthy/video/home-hero-v2-16x9.mp4", poster: "/healthy/video/home-hero-v2-16x9-poster.webp", width: 1920, height: 1080 },
+    // Square: the band below lg is close to square (375 x 416 on a phone), so the tall cut is a 1:1 crop.
+    tall: { src: "/healthy/video/home-hero-v2-1x1.mp4", poster: "/healthy/video/home-hero-v2-1x1-poster.webp", width: 1080, height: 1080 },
   });
 });
 
@@ -70,8 +71,8 @@ const markup = renderToStaticMarkup(<HeroVideo alt="A kitchen" />);
 
 test("the server render carries the poster as a <picture> with the wide source gated by WIDE_QUERY", () => {
   assert.match(markup, /<picture>/);
-  assert.match(markup, new RegExp(`<source media="${WIDE_QUERY.replace(/[()]/g, "\\$&")}"[^>]*src[sS]et="/healthy/video/home-hero-16x9-poster\\.webp"`));
-  assert.match(markup, /<img[^>]*src="\/healthy\/video\/home-hero-9x16-poster\.webp"/);
+  assert.match(markup, new RegExp(`<source media="${WIDE_QUERY.replace(/[()]/g, "\\$&")}"[^>]*src[sS]et="/healthy/video/home-hero-v2-16x9-poster\\.webp"`));
+  assert.match(markup, /<img[^>]*src="\/healthy\/video\/home-hero-v2-1x1-poster\.webp"/);
 });
 
 test("the poster <img> is fetched at high priority and carries the alt text", () => {
@@ -84,7 +85,7 @@ test("the poster <img> is fetched at high priority and carries the alt text", ()
 test("the poster sources declare their pixel size, so the band reserves its space before the file lands", () => {
   const img = markup.match(/<img[^>]*>/)?.[0] ?? "";
   assert.match(img, /width="1080"/);
-  assert.match(img, /height="1920"/);
+  assert.match(img, /height="1080"/);
   const wide = markup.match(/<source[^>]*>/)?.[0] ?? "";
   assert.match(wide, /width="1920"/);
   assert.match(wide, /height="1080"/);
