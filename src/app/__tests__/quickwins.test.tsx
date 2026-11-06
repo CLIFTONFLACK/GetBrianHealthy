@@ -167,32 +167,37 @@ test("each closing link is labelled '<goal>: <supplement>' and goes to that goal
   }
 });
 
-test("US closing links go to the US picks: magnesium, Pure Encapsulations creatine, L-theanine", () => {
+// Strength and Focus are both creatine goals, so two closing links share one review page.
+test("US closing links go to the US picks: creatine (Strength), creatine (Focus), L-theanine", () => {
   assert.deepEqual(
     closingLinks("US").map((l) => l.props.href),
     [
-      "/products/pure-encapsulations-magnesium-glycinate",
+      "/products/pure-encapsulations-creatine",
       "/products/pure-encapsulations-creatine",
       "/products/pure-encapsulations-l-theanine",
     ],
   );
 });
 
-test("GB closing links go to the UK picks: the creatine link is Thorne's", () => {
+test("GB closing links go to the UK picks: the creatine links are Thorne's", () => {
   assert.deepEqual(
     closingLinks("GB").map((l) => l.props.href),
     [
-      "/products/pure-encapsulations-magnesium-glycinate",
+      "/products/thorne-creatine",
       "/products/thorne-creatine",
       "/products/pure-encapsulations-l-theanine",
     ],
   );
 });
 
-test("GB closing link for the calm goal is labelled 'Evening: L-theanine', not 'Calm'", () => {
-  const labels = closingLinks("GB").map((l) => textOf(l).trim());
-  assert.ok(labels.includes("Evening: L-theanine"));
-  assert.ok(!labels.some((l) => l.startsWith("Calm")));
+test("closing links are labelled Strength, Focus and Calm in both countries", () => {
+  for (const region of ["US", "GB"] as const) {
+    assert.deepEqual(
+      closingLinks(region).map((l) => textOf(l).trim().split(":")[0]),
+      ["Strength", "Focus", "Calm"],
+      region,
+    );
+  }
 });
 
 test("no home-page link in either country goes through /go", () => {
@@ -202,13 +207,12 @@ test("no home-page link in either country goes through /go", () => {
   }
 });
 
-test("the hero in GB drops the 'Calm' bullet but the US hero keeps it", () => {
+test("the hero in GB drops the 'When You Need It Most' promise but the US hero keeps it", () => {
   const us = allElements(trees.US).map((el) => textOf(el)).join(" ");
   const gb = allElements(trees.GB).map((el) => textOf(el)).join(" ");
-  assert.match(us, /Energy, Strength and Calm When You Need It Most/);
-  assert.doesNotMatch(gb, /Energy, Strength and Calm When You Need It Most/);
-  assert.match(gb, /Energy and Exercise, Explained From the Research/);
-  assert.doesNotMatch(gb, /Strength/);
+  assert.match(us, /Strength, Focus and Calm When You Need It Most/);
+  assert.doesNotMatch(gb, /Strength, Focus and Calm When You Need It Most/);
+  assert.match(gb, /Strength, Focus and Calm, Explained From the Research/);
 });
 
 test("the home page shows the Amazon Associate sentence on the phone disclosure line", () => {

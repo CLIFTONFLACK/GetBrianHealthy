@@ -441,16 +441,24 @@ function listItems(ul: ReturnType<typeof GoalChooser>): unknown[] {
   return Array.isArray(kids) ? kids : [kids];
 }
 
-test("GoalChooser renders one tile per shown goal: energy, strength, calm", () => {
+test("GoalChooser renders one tile per shown goal: strength, focus, calm", () => {
   const items = listItems(GoalChooser());
   assert.equal(items.length, tileGoals.length);
-  assert.deepEqual(tileGoals.map((g) => g.id), ["energy", "strength", "calm"]);
+  assert.deepEqual(tileGoals.map((g) => g.id), ["strength", "focus", "calm"]);
 });
 
-test("Focus has no homepage tile but stays a creatine goal (rail and review page)", () => {
-  assert.equal(tileGoals.some((g) => g.id === "focus"), false);
+test("Energy has no homepage tile but stays a magnesium goal (rail and review page)", () => {
+  assert.equal(tileGoals.some((g) => g.id === "energy"), false);
+  const energy = goals.find((g) => g.id === "energy");
+  assert.ok(energy, "energy goal still exists in data");
+  assert.equal(energy.supplement, "magnesium");
+});
+
+test("Focus has a homepage tile and is a creatine goal that keeps its caveat", () => {
+  assert.equal(tileGoals.some((g) => g.id === "focus"), true);
   const focus = goals.find((g) => g.id === "focus");
   assert.ok(focus, "focus goal still exists in data");
+  assert.equal(focus.caveat, "promising, not proven");
   assert.equal(focus.supplement, "creatine");
 });
 
@@ -499,13 +507,13 @@ test('GoalChooser "strength" goal links to the UK creatine for a GB visitor', ()
   assert.equal(anchor.props.href, "/products/thorne-creatine");
 });
 
-test('GoalChooser "calm" tile for a GB visitor is relabelled "Evening" and says nothing about calm or stress', () => {
+test('GoalChooser "calm" tile for a GB visitor keeps the "Calm" label and a hook that says nothing about calm or stress', () => {
   const items = listItems(GoalChooser({ region: "GB" })) as { props: { children: { props: { children: unknown[] } } } }[];
   const calmIndex = tileGoals.findIndex((g) => g.id === "calm");
   const anchorChildren = items[calmIndex].props.children.props.children;
   const contentDiv = anchorChildren[2] as { props: { children: { props: { children: unknown } }[] } };
   const [, , labelSpan, hookParagraph] = contentDiv.props.children;
-  assert.equal(labelSpan.props.children, "Evening");
+  assert.equal(labelSpan.props.children, "Calm");
   assert.equal(hookParagraph.props.children, "Meet L-theanine, an amino acid found naturally in tea.");
 });
 
@@ -518,11 +526,11 @@ test('GoalChooser "calm" tile for a US visitor keeps the "Calm" label', () => {
   assert.equal(labelSpan.props.children, "Calm");
 });
 
-test('GoalChooser "energy" goal links to the magnesium review with no hash', () => {
+test('GoalChooser "focus" goal links to the creatine review, landing on its caveated section', () => {
   const items = listItems(GoalChooser()) as { props: { children: { props: Record<string, unknown> } } }[];
-  const energyIndex = tileGoals.findIndex((g) => g.id === "energy");
-  const anchor = items[energyIndex].props.children;
-  assert.equal(anchor.props.href, "/products/pure-encapsulations-magnesium-glycinate");
+  const focusIndex = tileGoals.findIndex((g) => g.id === "focus");
+  const anchor = items[focusIndex].props.children;
+  assert.equal(anchor.props.href, "/products/pure-encapsulations-creatine#creatine");
 });
 
 test('GoalChooser "calm" goal links to the l-theanine review with no hash', () => {

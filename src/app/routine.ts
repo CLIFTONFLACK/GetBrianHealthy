@@ -184,16 +184,17 @@ export type PickOption = { id: SupplementId; supplement: string; goal: string };
 
 /**
  * The picks a reader can add, labelled by the goal they serve in their region
- * ("Strength" in the US, "Exercise" in Great Britain), so the chips use the
- * same words as the goal tiles on the home page. A pick with no product in the
+ * ("Strength", "Energy", "Calm"), so the chips use the same words as the goal
+ * tiles on the home page and the picks rail. A pick with no product in the
  * region is not offered.
  */
 export function pickOptions(region: Region): PickOption[] {
   return SUPPLEMENT_IDS.flatMap((id) => {
     const supplement = localizeSupplement(getSupplement(id), region);
     if (!supplement.category || !pickFor(supplement.category, region)) return [];
-    // The first tile goal for the supplement; Focus is creatine's caveated second angle and has no tile.
-    const goal = goals.find((g) => g.supplement === id && g.showTile !== false);
+    // The first tile goal for the supplement: Strength for creatine, not its caveated Focus angle.
+    // Magnesium's goal (Energy) has no tile, so it falls back to the supplement's first goal.
+    const goal = goals.find((g) => g.supplement === id && g.showTile !== false) ?? goals.find((g) => g.supplement === id);
     return [{ id, supplement: supplement.name, goal: goal ? localizeGoal(goal, region).label : supplement.role }];
   });
 }

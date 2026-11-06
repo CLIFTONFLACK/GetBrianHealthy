@@ -75,29 +75,34 @@ test("sanity: the expanding walk reaches card and goal text, so the absence chec
   assert.match(text("US"), /Calm/);
 });
 
-// Note: the US home page shows no Focus text either (the focus goal has no
-// tile and the rail shows only a card's lead goal), so "GB renders no Focus"
-// above cannot fail through this page alone. The GB focus removal is pinned
-// where it is reachable: goalsForSupplement and the product page.
-
 // ---------------------------------------------------------------------------
 // GB: nothing that amounts to an unauthorised claim
 // ---------------------------------------------------------------------------
 
-test("GB home page renders no 'Focus'", () => {
-  assert.doesNotMatch(text("GB"), /Focus/);
+// Strength, Focus and Calm are the tile labels in both countries (Clifton, 2026-11-05).
+// What stays out of the GB page is the wording under the labels.
+
+test("GB home page has a 'Focus' tile, with neither the US hook nor the 'Cognition' eyebrow", () => {
+  const gb = text("GB");
+  assert.match(gb, /Focus/);
+  assert.match(gb, /Curious what else creatine has been studied for/);
+  assert.doesNotMatch(gb, /Creatine for your brain|Cognition|brain/i);
+  assert.match(text("US"), /Creatine for your brain/);
 });
 
 test("GB home page does not render the US creatine strapline 'Strength and physical performance'", () => {
   assert.doesNotMatch(text("GB"), /Strength and physical performance/);
 });
 
-test("GB home page renders no 'Calm' in the hero points or anywhere else", () => {
-  assert.doesNotMatch(text("GB"), /Calm/);
+test("GB home page keeps the 'Calm' label but not the promise 'When You Need It Most'", () => {
+  const gb = text("GB");
+  assert.match(gb, /Calm/);
+  assert.doesNotMatch(gb, /When You Need It Most/);
+  assert.match(gb, /Strength, Focus and Calm, Explained From the Research/);
 });
 
-test("US home page keeps 'Calm' in the hero points", () => {
-  assert.match(text("US"), /Energy, Strength and Calm When You Need It Most/);
+test("US home page keeps 'Strength, Focus and Calm When You Need It Most' in the hero points", () => {
+  assert.match(text("US"), /Strength, Focus and Calm When You Need It Most/);
 });
 
 test("GB home page renders no calm/relax/stress/sleep wording from the goals or supplements", () => {
@@ -117,13 +122,15 @@ test("US home page keeps its moon icon on the calm tile and rail", () => {
   assert.ok(iconCount("US", "moon") >= 1);
 });
 
-test("GB home page uses the book icon for the evening tile, one more than the US page uses", () => {
+test("GB home page uses the book icon for the calm tile, one more than the US page uses", () => {
   assert.ok(iconCount("GB", "book") > iconCount("US", "book"));
 });
 
-test("GB home page labels the strength tile 'Exercise'", () => {
-  assert.match(text("GB"), /Exercise/);
-  assert.doesNotMatch(text("GB"), /Strength: Creatine|Lifting after 40/);
+test("GB home page labels the first tile 'Strength' but with the neutral exercise hook", () => {
+  const gb = text("GB");
+  assert.match(gb, /Strength/);
+  assert.match(gb, /short, intense bursts of exercise/);
+  assert.doesNotMatch(gb, /Lifting after 40/);
 });
 
 // ---------------------------------------------------------------------------
