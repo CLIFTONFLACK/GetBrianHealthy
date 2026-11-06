@@ -168,7 +168,7 @@ textarea {
    other animation in this file.
 
    The home hero is the one exception to that one-time rule: since 4 Nov 2026
-   (owner's call) it is a silent 15 s kitchen clip that loops, served by
+   (owner's call) it is a silent 11.75 s loop of three scenes, served by
    hero-video.tsx. It is gated the same way as the mascot footage: no video
    under prefers-reduced-motion or Save-Data (the poster alone shows), it
    pauses off screen, and a 44px pause button sits in its corner. The script

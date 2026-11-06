@@ -68,9 +68,9 @@ export default async function HealthyHome() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
       />
 
-      {/* HERO: the looping kitchen clip (hero-video.tsx) runs full-bleed behind
+      {/* HERO: the looping three-scene clip (hero-video.tsx) runs full-bleed behind
           the section on large screens, feathered to white on the left so the
-          lockup and copy read over it. On small screens its 9:16 cut sits as a
+          lockup and copy read over it. On small screens its square cut sits as a
           band under the copy, feathered at the top. On large
           screens below 1544px the section pulls up over <main>'s pt-16 (the
           floating Menu's clearance) so the photo starts at the top of the page,
@@ -134,12 +134,13 @@ export default async function HealthyHome() {
           </div>
         </div>
 
-        {/* The scene's left third is plain wall, so on large screens the copy
-            and the feather sit over nothing that matters. Below lg the band is
-            tall enough (26rem, 30rem from sm) that the 9:16 cut shows the
-            worktop and the glass, not a thin slice of wall. */}
+        {/* In each of the three scenes the left third is plain wall, so on large
+            screens the copy and the feather sit over nothing that matters, and
+            the scene chip sits right of the feather. Below lg the band (26rem,
+            30rem from sm) is close to square, and the square cut is cropped
+            around each scene's subject. */}
         <div className="relative mt-16 h-[26rem] sm:mt-10 sm:h-[30rem] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto">
-          <HeroVideo alt="A glass of water and a bowl of fruit on a kitchen worktop in morning light" />
+          <HeroVideo alt="Trainers and a rolled towel on a bench in a home gym, labelled Strength. The film goes on to a desk by a window, labelled Focus, and an armchair under a lamp, labelled Calm" />
           <div
             className="healthy-hero-feather absolute inset-0 bg-gradient-to-b from-white via-white/0 via-35% to-transparent"
             aria-hidden="true"

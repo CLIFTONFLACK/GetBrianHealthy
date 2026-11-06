@@ -4,12 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 
 /*
- * The home hero's background: a silent 15 s kitchen clip that loops. It is the
- * one looping piece of motion on the site (owner's call, 4 Nov 2026; the rule
- * and its reasons are in globals.css beside the hero-zoom keyframes).
+ * The home hero's background: a silent 11.75 s loop of three scenes, one per job
+ * (Strength: a home gym; Focus: a desk by a window; Calm: an armchair and a lamp),
+ * each named by a small chip. It is the one looping piece of motion on the site
+ * (owner's call, 4 Nov 2026; the rule and its reasons are in globals.css beside
+ * the hero-zoom keyframes).
  *
- * Two cuts of the same scene: 16:9 from `lg` up, where the clip runs full-bleed
- * behind the copy, and 9:16 below, where it sits as a band under the copy.
+ * Two cuts of the same takes: 16:9 from `lg` up, where the clip runs full-bleed
+ * behind the copy, and a square crop below, where it sits as a band under the copy.
  * WIDE_QUERY must match the section's `lg:` breakpoint in page.tsx.
  *
  * The poster is the LCP element. It is server-rendered as a plain <picture>,
@@ -24,16 +26,18 @@ export type VideoCuts = { wide: VideoCut; tall: VideoCut };
 
 export const HERO_VIDEO: VideoCuts = {
   wide: {
-    src: "/healthy/video/home-hero-16x9.mp4",
-    poster: "/healthy/video/home-hero-16x9-poster.webp",
+    src: "/healthy/video/home-hero-v2-16x9.mp4",
+    poster: "/healthy/video/home-hero-v2-16x9-poster.webp",
     width: 1920,
     height: 1080,
   },
+  // Square, not 9:16: the band below `lg` is about 375 x 416 on a phone and 768 x 480 on a tablet, so a
+  // 1080 x 1080 crop around each scene's subject fills both. A 16:9 take cannot give a 9:16 frame anyway.
   tall: {
-    src: "/healthy/video/home-hero-9x16.mp4",
-    poster: "/healthy/video/home-hero-9x16-poster.webp",
+    src: "/healthy/video/home-hero-v2-1x1.mp4",
+    poster: "/healthy/video/home-hero-v2-1x1-poster.webp",
     width: 1080,
-    height: 1920,
+    height: 1080,
   },
 } as const;
 
@@ -72,7 +76,7 @@ export type HeroVideoMode = "poster" | "wide" | "tall";
  *
  * - "poster": reduced motion, or data saver on. No video at all.
  * - "wide": the 16:9 clip, from `lg` up.
- * - "tall": the 9:16 clip, below `lg`.
+ * - "tall": the other cut (a 1:1 square on the home hero, 9:16 on the method page), below the query.
  */
 export function heroVideoMode({
   reducedMotion,
