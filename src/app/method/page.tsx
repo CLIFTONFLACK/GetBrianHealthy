@@ -21,28 +21,43 @@ const grades: EvidenceGrade[] = ["strong", "moderate", "early"];
 
 export default function MethodPage() {
   return (
-    <div className="px-4 py-12 sm:px-6 sm:py-16">
-      <div className="mx-auto max-w-3xl">
-        <PageHeading
-          eyebrow="How we choose"
-          title="Research, evaluation, selection"
-          lead="Most supplement advice starts with the product. Brian starts with the research, and only then looks for a product that matches it."
-        />
+    <>
+      {/* HERO: the "How Brian decides" loop runs full-bleed behind the section from
+          lg up, feathered to white on the left so the heading reads over it (the
+          panel sits in the right half of the frame). Below lg the tall cut is a
+          band under the heading, cropped around the panel. The same pull-up as the
+          home hero: the section rises over <main>'s pt-16 (the floating Menu's
+          clearance) and adds it back to its own padding. The words in the clip are
+          process only, so one file serves both the UK and US sites. */}
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-12 sm:pt-16 lg:-mt-16 lg:flex lg:min-h-[max(40rem,40vw)] lg:items-center lg:pt-28 lg:pb-16 min-[1544px]:mt-0 min-[1544px]:pt-16">
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="lg:max-w-[28rem]">
+            <PageHeading
+              eyebrow="How we choose"
+              title="Research, evaluation, selection"
+              lead="Most supplement advice starts with the product. Brian starts with the research, and only then looks for a product that matches it."
+            />
+          </div>
+        </div>
 
-        {/* How Brian decides: the four steps as a short silent loop. The tall cut is
-            cropped to a square around the panel on phones. The words are process
-            only, so one file serves both the UK and US sites. */}
-        <div className="relative mt-10 aspect-square overflow-hidden rounded-2xl sm:aspect-[4/3]">
+        <div className="relative mt-10 h-[26rem] sm:h-[30rem] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto">
           <HeroVideo
             alt="A kitchen worktop in morning light with a panel titled How Brian decides: Brian reads the sources, checks the label, grades the evidence and helps you meet your goal"
             video={METHOD_VIDEO}
             query={METHOD_QUERY}
-            fit="object-[50%_47%] sm:object-center"
+            fit="object-[50%_47%] lg:object-top"
             label="How Brian decides video"
           />
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-white via-white/0 via-35% to-transparent lg:bg-[linear-gradient(to_right,#fff_0,#fff_40%,rgb(255_255_255/0.7)_46%,transparent_52%)]"
+            aria-hidden="true"
+          />
         </div>
+      </section>
 
-        <div className="relative mt-6 aspect-[21/9] overflow-hidden rounded-2xl">
+      <div className="px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-3xl">
+        <div className="relative aspect-[21/9] overflow-hidden rounded-2xl">
           <Image
             src="/healthy/research-desk.jpg"
             alt="A desk with research papers, handwritten notes and reading glasses under warm lamp light"
@@ -120,6 +135,7 @@ export default function MethodPage() {
           </Prose>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
