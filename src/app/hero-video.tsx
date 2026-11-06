@@ -19,7 +19,10 @@ import { Icon } from "./icons";
  * hydration, and only when motion is wanted: never under reduced motion or
  * Save-Data, which get the poster alone (about 30 KB against about 3 MB).
  */
-export const HERO_VIDEO = {
+export type VideoCut = { src: string; poster: string; width: number; height: number };
+export type VideoCuts = { wide: VideoCut; tall: VideoCut };
+
+export const HERO_VIDEO: VideoCuts = {
   wide: {
     src: "/healthy/video/home-hero-16x9.mp4",
     poster: "/healthy/video/home-hero-16x9-poster.webp",
@@ -33,6 +36,29 @@ export const HERO_VIDEO = {
     height: 1920,
   },
 } as const;
+
+/*
+ * The "How Brian decides" clip on the method page: the same kitchen plate with a
+ * frosted panel (sources, label, evidence grade, goal). From `sm` up, a 4:3 crop
+ * of the wide cut around the panel (the full frame would shrink the text to about
+ * 7 px in the page's 48rem column). Below that the tall cut, shown as a square
+ * crop around the panel (see the method page). The `wide` key means "above the query".
+ */
+export const METHOD_VIDEO: VideoCuts = {
+  wide: {
+    src: "/healthy/video/method-data-4x3.mp4",
+    poster: "/healthy/video/method-data-4x3-poster.webp",
+    width: 880,
+    height: 660,
+  },
+  tall: {
+    src: "/healthy/video/method-data-9x16.mp4",
+    poster: "/healthy/video/method-data-9x16-poster.webp",
+    width: 1080,
+    height: 1920,
+  },
+};
+export const METHOD_QUERY = "(min-width: 40rem)";
 
 /** The section goes full-bleed at Tailwind's `lg` (64rem); so does the wide cut. */
 export const WIDE_QUERY = "(min-width: 64rem)";
@@ -61,7 +87,22 @@ export function heroVideoMode({
   return wide ? "wide" : "tall";
 }
 
-export function HeroVideo({ alt }: { alt: string }) {
+export function HeroVideo({
+  alt,
+  video = HERO_VIDEO,
+  query = WIDE_QUERY,
+  fit = "object-[center_60%] lg:object-center",
+  label = "background video",
+}: {
+  alt: string;
+  video?: VideoCuts;
+  /** Media query under which the wide cut is used. */
+  query?: string;
+  /** object-position classes for the poster and the clip. */
+  fit?: string;
+  /** Names the clip in the pause button: "Pause <label>". */
+  label?: string;
+}) {
   // "pending" until the mount effect runs: the server and the first client
   // render both show the poster alone, so there is nothing to hydrate apart.
   const [mode, setMode] = useState<HeroVideoMode | "pending">("pending");
@@ -79,16 +120,16 @@ export function HeroVideo({ alt }: { alt: string }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     const saveData = connection?.saveData === true;
-    const wideQuery = window.matchMedia(WIDE_QUERY);
+    const wideQuery = window.matchMedia(query);
     const decide = () => setMode(heroVideoMode({ reducedMotion: reduced, saveData, wide: wideQuery.matches }));
     decide();
     // Crossing `lg` swaps the cut; the key on <HeroClip> below remounts it
     // with fresh per-clip state.
     wideQuery.addEventListener("change", decide);
     return () => wideQuery.removeEventListener("change", decide);
-  }, []);
+  }, [query]);
 
-  const source = mode === "wide" || mode === "tall" ? HERO_VIDEO[mode] : null;
+  const source = mode === "wide" || mode === "tall" ? video[mode] : null;
 
   return (
     <div className="healthy-hero-video absolute inset-0">
@@ -96,19 +137,19 @@ export function HeroVideo({ alt }: { alt: string }) {
           <img> inside <picture>, fetched at high priority: it is the largest
           thing above the fold on every screen. */}
       <picture>
-        <source media={WIDE_QUERY} srcSet={HERO_VIDEO.wide.poster} width={HERO_VIDEO.wide.width} height={HERO_VIDEO.wide.height} />
+        <source media={query} srcSet={video.wide.poster} width={video.wide.width} height={video.wide.height} />
         <img
-          src={HERO_VIDEO.tall.poster}
-          width={HERO_VIDEO.tall.width}
-          height={HERO_VIDEO.tall.height}
+          src={video.tall.poster}
+          width={video.tall.width}
+          height={video.tall.height}
           alt={alt}
           fetchPriority="high"
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover object-[center_60%] lg:object-center"
+          className={`absolute inset-0 h-full w-full object-cover ${fit}`}
         />
       </picture>
       {/* A source the browser cannot decode leaves the poster in place. */}
-      {source && <HeroClip key={mode} source={source} isUserPaused={isUserPaused} setUserPaused={setUserPaused} onFail={() => setMode("poster")} />}
+      {source && <HeroClip key={mode} source={source} isUserPaused={isUserPaused} setUserPaused={setUserPaused} onFail={() => setMode("poster")} fit={fit} label={label} />}
     </div>
   );
 }
@@ -124,11 +165,15 @@ function HeroClip({
   isUserPaused,
   setUserPaused,
   onFail,
+  fit,
+  label,
 }: {
-  source: (typeof HERO_VIDEO)[HeroVideoMode & keyof typeof HERO_VIDEO];
+  source: VideoCut;
   isUserPaused: () => boolean;
   setUserPaused: (paused: boolean) => void;
   onFail: () => void;
+  fit: string;
+  label: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   // True from the first frame the browser actually paints; the video is
@@ -185,7 +230,7 @@ function HeroClip({
         }}
         onPause={() => setPlaying(false)}
         onError={onFail}
-        className={`absolute inset-0 h-full w-full object-cover object-[center_60%] transition-opacity duration-700 ease-out lg:object-center ${ready ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 h-full w-full object-cover ${fit} transition-opacity duration-700 ease-out ${ready ? "opacity-100" : "opacity-0"}`}
       />
       {/* WCAG 2.2.2: anything that moves for more than five seconds needs a
           way to stop it. One 44 px button, bottom-right, above the mascot
@@ -193,7 +238,7 @@ function HeroClip({
       <button
         type="button"
         onClick={togglePlay}
-        aria-label={playing ? "Pause background video" : "Play background video"}
+        aria-label={playing ? `Pause ${label}` : `Play ${label}`}
         className="absolute right-4 bottom-4 z-30 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/90 text-kinetic-primary shadow-sm transition-colors duration-200 hover:bg-white hover:text-kinetic-primary-electric focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-kinetic-primary-electric"
       >
         <Icon name={playing ? "pause" : "play"} size={18} />
