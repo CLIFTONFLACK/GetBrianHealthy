@@ -211,7 +211,9 @@ export const goals: {
   caveat?: string;
   /**
    * False keeps the goal off the homepage tiles while it still appears on its
-   * review page and in the picks rail (Clifton, 2026-09-24: no Focus tile).
+   * review page and in the picks rail. The tiles are Strength, Focus and Calm
+   * (Clifton, 2026-11-05, reversing the 2026-09-24 "no Focus tile" choice), so
+   * Energy is the goal that sits off the tiles.
    */
   showTile?: boolean;
   /**
@@ -231,6 +233,7 @@ export const goals: {
     hook: "Low on magnesium? Many don't get enough, and we need it to turn food into energy.",
     supplement: "magnesium",
     icon: "zap",
+    showTile: false,
     eyebrowDetail: "Cellular Energy",
     accent: "amber",
     image: "/healthy/goals/energy.jpg",
@@ -254,7 +257,6 @@ export const goals: {
     supplement: "creatine",
     icon: "target",
     section: "creatine",
-    showTile: false,
     caveat: "promising, not proven",
     eyebrowDetail: "Cognition",
     accent: "purple",
@@ -310,14 +312,21 @@ const GB_SUPPLEMENT_COPY: Partial<Record<Supplement["id"], Partial<Supplement>>>
   },
 };
 
+// The labels stay Strength and Calm in both regions (Clifton, 2026-11-05); only the hook and eyebrow differ in Great Britain.
 const GB_GOAL_COPY: Partial<Record<Goal, Partial<(typeof goals)[number]>>> = {
   strength: {
-    label: "Exercise",
     hook: "Do short, intense bursts of exercise? Meet creatine, the most-studied ingredient for them.",
     eyebrowDetail: "High-Intensity Exercise",
   },
+  // The US hook and "Cognition" eyebrow make a claim that is not authorised here, so only the label is shared.
+  focus: {
+    hook: "Curious what else creatine has been studied for? Early research only, nothing proven.",
+    eyebrowDetail: "Early Research",
+    imageAlt: "A woman working at a desk",
+    // The UK creatine card carries no caveat, so the tile opens the page at the top, next to the hedge, not on the card.
+    section: undefined,
+  },
   calm: {
-    label: "Evening",
     hook: "Meet L-theanine, an amino acid found naturally in tea.",
     eyebrowDetail: "Evening Routine",
     // The moon would hint at the sleep and relaxation claim that is not allowed here.
@@ -325,8 +334,12 @@ const GB_GOAL_COPY: Partial<Record<Goal, Partial<(typeof goals)[number]>>> = {
   },
 };
 
-/** Goals that exist only for the US: the claim behind them is not authorised in Great Britain. */
-const GB_HIDDEN_GOALS = new Set<Goal>(["focus"]);
+/**
+ * Goals that exist only for the US: the claim behind them is not authorised in Great Britain.
+ * Empty since 2026-11-05: Focus is a homepage tile in both regions, so it cannot be hidden from
+ * the picks rail in one of them. Its caveat ("promising, not proven") travels with it.
+ */
+const GB_HIDDEN_GOALS = new Set<Goal>();
 
 /** The goals a supplement serves for a region's visitor, localized and with any not allowed there removed. */
 export function goalsForSupplement(id: Supplement["id"], region: Region): (typeof goals)[number][] {

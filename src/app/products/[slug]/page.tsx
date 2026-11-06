@@ -385,10 +385,11 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
                   {jobs.map((j) => (
                     <span key={j.id} className="mt-1 block font-heading text-lg font-semibold text-brand-navy">
                       {j.label}
-                      {/* Focus never appears without its caveat, even here, far from the card on phones. */}
-                      {supplement?.caveat && j.id === "focus" && (
+                      {/* Focus never appears without its caveat, even here, far from the card on phones. In the UK
+                          the card says nothing beyond the one authorised claim, so this line is where the hedge lives. */}
+                      {j.id === "focus" && (
                         <span className="block font-body text-sm font-normal text-fg-muted">
-                          Promising, but not yet established
+                          {region === "GB" ? "Early research, nothing proven" : "Promising, but not yet established"}
                         </span>
                       )}
                     </span>
