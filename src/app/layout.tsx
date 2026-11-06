@@ -128,6 +128,7 @@ const nav = [
   { href: "/#picks", label: "Brian's picks" },
   { href: "/method", label: "How Brian picks" },
   { href: "/routine", label: "Daily routine" },
+  { href: "/guide", label: "Free guide" },
   { href: "/about", label: "About" },
   { href: "/about#contact", label: "Contact" },
 ];
