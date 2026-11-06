@@ -139,7 +139,7 @@ export default async function HealthyHome() {
             tall enough (26rem, 30rem from sm) that the 9:16 cut shows the
             worktop and the glass, not a thin slice of wall. */}
         <div className="relative mt-16 h-[26rem] sm:mt-10 sm:h-[30rem] lg:absolute lg:inset-0 lg:mt-0 lg:h-auto">
-          <HeroVideo alt="A kitchen worktop in morning light, with a panel that reads: read the sources, check the label, grade the evidence, choose your goal" />
+          <HeroVideo alt="A glass of water and a bowl of fruit on a kitchen worktop in morning light" />
           <div
             className="healthy-hero-feather absolute inset-0 bg-gradient-to-b from-white via-white/0 via-35% to-transparent"
             aria-hidden="true"

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { healthyOpenGraph, ogImages } from "../layout";
 import Link from "next/link";
 import { PageHeading, Prose } from "../components";
+import { HeroVideo, METHOD_QUERY, METHOD_VIDEO } from "../hero-video";
 import { gradeLabels, type EvidenceGrade } from "../data";
 
 const title = "How we choose";
@@ -28,7 +29,20 @@ export default function MethodPage() {
           lead="Most supplement advice starts with the product. Brian starts with the research, and only then looks for a product that matches it."
         />
 
-        <div className="relative mt-10 aspect-[21/9] overflow-hidden rounded-2xl">
+        {/* How Brian decides: the four steps as a short silent loop. The tall cut is
+            cropped to a square around the panel on phones. The words are process
+            only, so one file serves both the UK and US sites. */}
+        <div className="relative mt-10 aspect-square overflow-hidden rounded-2xl sm:aspect-[4/3]">
+          <HeroVideo
+            alt="A kitchen worktop in morning light with a panel titled How Brian decides: Brian reads the sources, checks the label, grades the evidence and helps you meet your goal"
+            video={METHOD_VIDEO}
+            query={METHOD_QUERY}
+            fit="object-[50%_47%] sm:object-center"
+            label="How Brian decides video"
+          />
+        </div>
+
+        <div className="relative mt-6 aspect-[21/9] overflow-hidden rounded-2xl">
           <Image
             src="/healthy/research-desk.jpg"
             alt="A desk with research papers, handwritten notes and reading glasses under warm lamp light"

@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HERO_VIDEO, HeroVideo, WIDE_QUERY, heroVideoMode } from "../hero-video.tsx";
+import { HERO_VIDEO, HeroVideo, METHOD_QUERY, METHOD_VIDEO, WIDE_QUERY, heroVideoMode } from "../hero-video.tsx";
 
 /**
  * hero-video.tsx is a "use client" component with hooks. Its one decision,
@@ -129,8 +129,26 @@ test("the video takes its poster from the same cut, so the first painted frame m
   assert.match(videoElement, /poster=\{source\.poster\}/);
 });
 
+test("the home hero keeps its own object-position by default (the prop must not change it)", () => {
+  assert.match(source, /fit = "object-\[center_60%\] lg:object-center",/);
+});
+
+test("the method page clip: files exist, the query is Tailwind sm, and the page passes all four props", () => {
+  assert.equal(METHOD_QUERY, "(min-width: 40rem)");
+  const publicDir = path.resolve(testDir, "../../../public");
+  for (const cut of [METHOD_VIDEO.wide, METHOD_VIDEO.tall]) {
+    for (const url of [cut.src, cut.poster]) {
+      assert.ok(statSync(path.join(publicDir, url)).size > 1000, `${url} is missing or empty`);
+    }
+  }
+  const methodSource = readFileSync(path.resolve(testDir, "../method/page.tsx"), "utf8");
+  assert.match(methodSource, /video=\{METHOD_VIDEO\}/);
+  assert.match(methodSource, /query=\{METHOD_QUERY\}/);
+  assert.match(methodSource, /sm:aspect-\[4\/3\]/);
+});
+
 test("the clip is remounted when the cut changes (HeroClip keyed on mode), so its flags start over", () => {
-  assert.match(source, /<HeroClip key=\{mode\} source=\{source\} isUserPaused=\{isUserPaused\} setUserPaused=\{setUserPaused\} onFail=\{\(\) => setMode\("poster"\)\} \/>/);
+  assert.match(source, /<HeroClip key=\{mode\} source=\{source\} isUserPaused=\{isUserPaused\} setUserPaused=\{setUserPaused\} onFail=\{\(\) => setMode\("poster"\)\} fit=\{fit\} label=\{label\} \/>/);
   // ready and playing belong to the clip, not the parent: a remount resets them.
   const clip = source.slice(source.indexOf("function HeroClip"));
   assert.match(clip, /const \[ready, setReady\] = useState\(false\);/);
@@ -162,7 +180,9 @@ test("a decode error drops the video and leaves the poster", () => {
 });
 
 test("the video is mounted only for the wide and tall modes, never for poster or pending", () => {
-  assert.match(source, /const source = mode === "wide" \|\| mode === "tall" \? HERO_VIDEO\[mode\] : null;/);
+  assert.match(source, /const source = mode === "wide" \|\| mode === "tall" \? video\[mode\] : null;/);
+  // The home hero passes no props, so it still plays the home clip.
+  assert.match(source, /video = HERO_VIDEO,/);
   assert.match(source, /\{source && <HeroClip /);
   // The <video> itself lives only inside HeroClip.
   assert.ok(source.indexOf("<video\n") > source.indexOf("function HeroClip"));
@@ -186,9 +206,11 @@ test("Save-Data is read from navigator.connection.saveData, strictly true", () =
 });
 
 test("the width is read from WIDE_QUERY and re-read when it changes, with the listener removed on cleanup", () => {
-  assert.match(source, /const wideQuery = window\.matchMedia\(WIDE_QUERY\);/);
+  // The query is a prop that defaults to WIDE_QUERY, so the home hero reads WIDE_QUERY.
+  assert.match(source, /query = WIDE_QUERY,/);
+  assert.match(source, /const wideQuery = window\.matchMedia\(query\);/);
   assert.match(source, /wideQuery\.addEventListener\("change", decide\);/);
-  assert.match(source, /return \(\) => wideQuery\.removeEventListener\("change", decide\);/);
+  assert.match(source, /return \(\) => wideQuery\.removeEventListener\("change", decide\);\s*\}, \[query\]\);/);
 });
 
 test("all three inputs go through heroVideoMode, not a second copy of the rule", () => {
@@ -233,7 +255,9 @@ test("there is exactly one button, and it is type=button", () => {
 });
 
 test("the button's label flips between pause and play and names what it controls", () => {
-  assert.match(source, /aria-label=\{playing \? "Pause background video" : "Play background video"\}/);
+  assert.match(source, /aria-label=\{playing \? `Pause \$\{label\}` : `Play \$\{label\}`\}/);
+  // The default label keeps the home hero's button reading "Pause background video".
+  assert.match(source, /label = "background video",/);
   assert.match(source, /<Icon name=\{playing \? "pause" : "play"\}/);
 });
 
