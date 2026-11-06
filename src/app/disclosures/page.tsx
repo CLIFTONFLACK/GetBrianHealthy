@@ -76,6 +76,10 @@ export default async function DisclosuresPage() {
               Register, so pages for UK visitors make fewer claims, and none for L-theanine. Visitors
               outside the UK see the US picks. You can change country at any time in the footer.
             </p>
+            <p>
+              The free guide is different: there is one edition for every country. It is the same
+              wherever you read it, and it includes statements about L-theanine.
+            </p>
 
             <h2>Names and trademarks</h2>
             <p>
