@@ -39,17 +39,17 @@ export const HERO_VIDEO: VideoCuts = {
 
 /*
  * The "How Brian decides" clip on the method page: the same kitchen plate with a
- * frosted panel (sources, label, evidence grade, goal). From `sm` up, a 4:3 crop
- * of the wide cut around the panel (the full frame would shrink the text to about
- * 7 px in the page's 48rem column). Below that the tall cut, shown as a square
- * crop around the panel (see the method page). The `wide` key means "above the query".
+ * frosted panel (sources, label, evidence grade, goal). It is the method page's
+ * full-bleed hero: the wide cut from `lg` up (the panel sits in the right half, the
+ * heading over the feathered left), the tall cut below, as a band cropped around
+ * the panel (see the method page). The `wide` key means "above the query".
  */
 export const METHOD_VIDEO: VideoCuts = {
   wide: {
-    src: "/healthy/video/method-data-4x3.mp4",
-    poster: "/healthy/video/method-data-4x3-poster.webp",
-    width: 880,
-    height: 660,
+    src: "/healthy/video/method-data-16x9.mp4",
+    poster: "/healthy/video/method-data-16x9-poster.webp",
+    width: 1920,
+    height: 1080,
   },
   tall: {
     src: "/healthy/video/method-data-9x16.mp4",
@@ -58,7 +58,7 @@ export const METHOD_VIDEO: VideoCuts = {
     height: 1920,
   },
 };
-export const METHOD_QUERY = "(min-width: 40rem)";
+export const METHOD_QUERY = "(min-width: 64rem)";
 
 /** The section goes full-bleed at Tailwind's `lg` (64rem); so does the wide cut. */
 export const WIDE_QUERY = "(min-width: 64rem)";
