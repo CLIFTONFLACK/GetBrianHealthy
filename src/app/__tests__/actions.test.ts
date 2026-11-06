@@ -80,12 +80,12 @@ test.before(async () => {
 
 let region: "US" | "GB" = "US";
 
-test("requestGuide refuses a UK visitor without sending any email", async () => {
+test("requestGuide accepts a UK visitor: the guide is global", async () => {
   region = "GB";
   sendConfirmationImpl = async () => true;
   try {
-    assert.deepEqual(await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" })), { status: "error" });
-    assert.equal(sendConfirmationCalls.length, 0);
+    assert.deepEqual(await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" })), { status: "sent" });
+    assert.equal(sendConfirmationCalls.length, 1);
   } finally {
     region = "US";
   }

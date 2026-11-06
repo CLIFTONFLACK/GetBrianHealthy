@@ -5,34 +5,25 @@ import { FdaDisclaimer } from "../components";
 import { Icon, type IconName } from "../icons";
 import { healthyOpenGraph, ogImages } from "../layout";
 import { guideSignupEnabled } from "../newsletter";
-import { getRegion } from "../region-server";
 import { GuideSignup } from "./guide-signup";
 
 const TITLE = "Free guide: Energy. Strength. Calm.";
 const DESCRIPTION =
   "Brian's free 19-page guide for adults 40+: what 18 clinical papers say about magnesium, creatine and L-theanine, plus the food, training and sleep habits that do most of the work.";
 
-/** UK visitors get a neutral title and description, to match the note they see instead of the guide. */
-const TITLE_GB = "Free guide";
-const DESCRIPTION_GB = "GetBrian Healthy's free guide is written for US readers. A UK edition is being prepared.";
-
-export async function generateMetadata(): Promise<Metadata> {
-  const gb = (await getRegion()) === "GB";
-  const title = gb ? TITLE_GB : TITLE;
-  const description = gb ? DESCRIPTION_GB : DESCRIPTION;
-  return {
-    title,
-    description,
-    alternates: { canonical: "/guide" },
-    openGraph: {
-      ...healthyOpenGraph,
-      title,
-      description,
-      url: "/guide",
-      ...(gb ? {} : { images: [ogImages.guide] }),
-    },
-  };
-}
+/** One guide for every visitor, so the metadata is static: no region lookup. */
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/guide" },
+  openGraph: {
+    ...healthyOpenGraph,
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/guide",
+    images: [ogImages.guide],
+  },
+};
 
 /** What the reader gets, in the order the guide covers it. */
 const INSIDE: { icon: IconName; title: string; body: string }[] = [
@@ -91,33 +82,9 @@ function SignupOrNotice({ enabled }: { enabled: boolean }) {
 
 /**
  * Landing page for the free ebook, the target of the ManyChat DM button.
- * The guide makes US structure/function statements (L-theanine above all),
- * which are not authorised in Great Britain, so UK visitors get a short note
- * and no form instead.
+ * One global guide: every visitor, in any country, gets the same page and form.
  */
-export default async function GuidePage() {
-  const region = await getRegion();
-
-  if (region === "GB") {
-    return (
-      <div className="px-4 py-12 sm:px-6 sm:py-16" data-guide-gb>
-        <div className="mx-auto max-w-3xl space-y-5">
-          <p className="text-sm font-semibold tracking-wider text-kinetic-primary-electric uppercase">Free guide</p>
-          <h1 className="font-kinetic-heading text-4xl font-extrabold tracking-tight text-kinetic-primary sm:text-5xl">
-            Brian&apos;s guide is coming to the UK
-          </h1>
-          <p className="text-lg leading-relaxed text-slate-700">
-            Our first guide is written for readers in the United States, under US rules on what supplements may say. A UK
-            edition is being prepared.
-          </p>
-          <Link href="/" className={ctaClass}>
-            See Brian&apos;s UK picks
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
+export default function GuidePage() {
   const enabled = guideSignupEnabled();
 
   return (
@@ -229,7 +196,8 @@ export default async function GuidePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <FdaDisclaimer region={region} />
+        {/* The guide carries this same statement, so the page matches it for every visitor. */}
+        <FdaDisclaimer />
       </div>
     </>
   );
