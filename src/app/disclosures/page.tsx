@@ -113,10 +113,13 @@ export default async function DisclosuresPage() {
             </p>
             <p>
               The only personal information these pages ask for is an email address, and only if you
-              sign up to hear when a pick changes. It is used for nothing else: at most two emails a
-              year, sent through our email provider, Resend, which stores the address for us. You are
-              added only after you confirm from the email we send, every update has an unsubscribe
-              link, and you can ask us to delete your address at any time by emailing{" "}
+              sign up for one of two lists. &quot;Hear when a pick changes&quot; sends at most two emails a
+              year. The free guide sends the guide&apos;s download link and then one short tip a week.
+              Each list gets only its own emails. Our email provider, Resend, sends the emails and
+              stores the address for us. You are added only after you confirm from the email we send.
+              Every email has an unsubscribe link, and it stops all GetBrian Healthy emails, from both
+              lists. If you later sign up and confirm again, emails start again for every list you
+              joined. You can ask us to delete your address at any time by emailing{" "}
               <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
             </p>
 

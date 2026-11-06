@@ -1,10 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
+  GUIDE_PDF_PATH,
   TOKEN_TTL_MS,
   addContact,
+  guideSignupEnabled,
   normalizeEmail,
+  readConfiguredToken,
+  readToken,
   sendConfirmation,
+  sendGuide,
   signToken,
   signupEnabled,
   verifyConfiguredToken,
@@ -15,7 +23,13 @@ import {
 // Environment helpers
 // ---------------------------------------------------------------------------
 
-const ENV_KEYS = ["RESEND_API_KEY", "RESEND_SEGMENT_ID", "NEWSLETTER_SECRET", "NEWSLETTER_FROM"] as const;
+const ENV_KEYS = [
+  "RESEND_API_KEY",
+  "RESEND_SEGMENT_ID",
+  "RESEND_GUIDE_SEGMENT_ID",
+  "NEWSLETTER_SECRET",
+  "NEWSLETTER_FROM",
+] as const;
 
 const VALID_SECRET = "a".repeat(32);
 
@@ -24,6 +38,7 @@ function setFullEnv(overrides: Partial<Record<(typeof ENV_KEYS)[number], string 
   const values: Record<(typeof ENV_KEYS)[number], string | undefined> = {
     RESEND_API_KEY: "re_test_key",
     RESEND_SEGMENT_ID: "seg_123",
+    RESEND_GUIDE_SEGMENT_ID: undefined,
     NEWSLETTER_SECRET: VALID_SECRET,
     NEWSLETTER_FROM: "Brian <brian@getbrian.xyz>",
     ...overrides,
@@ -735,4 +750,303 @@ test("a 409 on joining the segment is a normal outcome and is not logged", async
   const { lines, result } = await captureErrors(() => withFetch(impl, () => addContact(READER)));
   assert.equal(result, true);
   assert.deepEqual(lines, []);
+});
+
+// ---------------------------------------------------------------------------
+// Guide list: tokens
+// ---------------------------------------------------------------------------
+
+const NOW = 1_000_000;
+
+/** A token signed the way the app did before the guide list existed: email and expiry only. */
+function legacyUpdatesToken(email: string, now: number, secret: string): string {
+  const payload = Buffer.from(JSON.stringify({ e: email, x: now + TOKEN_TTL_MS })).toString("base64url");
+  return `${payload}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
+}
+
+/** Keeps the signature of `token` and puts a different payload in front of it. */
+function withPayload(token: string, body: object): string {
+  const [, sig] = token.split(".");
+  return `${Buffer.from(JSON.stringify(body)).toString("base64url")}.${sig}`;
+}
+
+test("a guide token reads back with its normalized email and the guide list", () => {
+  const token = signToken("Reader@Example.com", NOW, VALID_SECRET, "guide");
+  assert.deepEqual(readToken(token, NOW, VALID_SECRET), { email: "reader@example.com", list: "guide" });
+});
+
+test("an updates token reads back with the updates list", () => {
+  const token = signToken("reader@example.com", NOW, VALID_SECRET);
+  assert.deepEqual(readToken(token, NOW, VALID_SECRET), { email: "reader@example.com", list: "updates" });
+});
+
+test("an updates token keeps the original payload shape, with no list field", () => {
+  const token = signToken("reader@example.com", NOW, VALID_SECRET);
+  const payload = Buffer.from(token.split(".")[0], "base64url").toString("utf8");
+  assert.equal(payload, JSON.stringify({ e: "reader@example.com", x: NOW + TOKEN_TTL_MS }));
+});
+
+test("a token signed in the original format, before the list field existed, still reads as the updates list", () => {
+  const token = legacyUpdatesToken("reader@example.com", NOW, VALID_SECRET);
+  assert.deepEqual(readToken(token, NOW, VALID_SECRET), { email: "reader@example.com", list: "updates" });
+});
+
+test("a guide token's list cannot be changed to updates without breaking the signature", () => {
+  const guide = signToken("reader@example.com", NOW, VALID_SECRET, "guide");
+  const forged = withPayload(guide, { e: "reader@example.com", x: NOW + TOKEN_TTL_MS });
+  assert.equal(readToken(forged, NOW, VALID_SECRET), null);
+});
+
+test("an updates token cannot be upgraded to the guide list by adding the list field", () => {
+  const updates = signToken("reader@example.com", NOW, VALID_SECRET);
+  const forged = withPayload(updates, { e: "reader@example.com", x: NOW + TOKEN_TTL_MS, l: "guide" });
+  assert.equal(readToken(forged, NOW, VALID_SECRET), null);
+});
+
+test("a guide token past its expiry is rejected", () => {
+  const token = signToken("reader@example.com", NOW, VALID_SECRET, "guide");
+  assert.equal(readToken(token, NOW + TOKEN_TTL_MS + 1, VALID_SECRET), null);
+});
+
+test("verifyToken still returns only the email for a guide token", () => {
+  const token = signToken("reader@example.com", NOW, VALID_SECRET, "guide");
+  assert.equal(verifyToken(token, NOW, VALID_SECRET), "reader@example.com");
+});
+
+test("readConfiguredToken returns the email and list of a guide token signed with the configured secret", () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  const token = signToken(READER, NOW, VALID_SECRET, "guide");
+  assert.deepEqual(readConfiguredToken(token, NOW), { email: READER, list: "guide" });
+});
+
+// ---------------------------------------------------------------------------
+// Guide list: configuration
+// ---------------------------------------------------------------------------
+
+test("guideSignupEnabled is true when the guide segment is set alongside the updates settings", () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  assert.equal(guideSignupEnabled(), true);
+});
+
+test("guideSignupEnabled is false when the guide segment is not set, although updates are on", () => {
+  setFullEnv();
+  assert.equal(signupEnabled(), true, "fixture check: updates sign-up is configured");
+  assert.equal(guideSignupEnabled(), false);
+});
+
+test("guideSignupEnabled is false when the guide segment is an empty string", () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "" });
+  assert.equal(guideSignupEnabled(), false);
+});
+
+test("guideSignupEnabled is false when the base feature is not configured, even with a guide segment", () => {
+  setFullEnv({ RESEND_API_KEY: undefined, RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  assert.equal(guideSignupEnabled(), false);
+});
+
+test("GUIDE_PDF_PATH names a file that exists under public/", () => {
+  assert.ok(existsSync(join(import.meta.dirname, "..", "..", "..", "public", GUIDE_PDF_PATH)));
+});
+
+// ---------------------------------------------------------------------------
+// Guide list: confirmation email
+// ---------------------------------------------------------------------------
+
+test("sendConfirmation for the guide list refuses and makes no request when the guide segment is not set", async () => {
+  setFullEnv();
+  let called = false;
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => {
+        called = true;
+        return jsonResponse(200);
+      },
+      () => sendConfirmation(READER, "https://site.test", NOW, "guide"),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(called, false);
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "send-email",
+    status: null,
+    name: "not_configured",
+    missing: ["RESEND_GUIDE_SEGMENT_ID"],
+  });
+});
+
+/** Sends a confirmation for `list` and returns the subject and text Resend was given. */
+async function capturedConfirmation(list: "updates" | "guide"): Promise<{ subject: string; text: string }> {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  let captured = { subject: "", text: "" };
+  await withFetch(
+    async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      captured = { subject: body.subject, text: body.text };
+      return jsonResponse(200);
+    },
+    () => sendConfirmation(READER, "https://site.test", NOW, list),
+  );
+  return captured;
+}
+
+test("the guide confirmation link carries a token that reads back as the guide list", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  let sentText = "";
+  const ok = await withFetch(
+    async (_input, init) => {
+      sentText = JSON.parse((init as RequestInit).body as string).text;
+      return jsonResponse(200);
+    },
+    () => sendConfirmation(READER, "https://site.test", NOW, "guide"),
+  );
+  assert.equal(ok, true);
+  const match = sentText.match(/\?t=([^\s]+)/);
+  assert.ok(match, "confirmation text should contain a token");
+  assert.deepEqual(readConfiguredToken(decodeURIComponent(match![1]), NOW), { email: READER, list: "guide" });
+});
+
+test("the guide confirmation email has its own subject", async () => {
+  const guide = await capturedConfirmation("guide");
+  assert.equal(guide.subject, "Confirm to get your free guide");
+});
+
+test("the updates confirmation email keeps its own subject", async () => {
+  const updates = await capturedConfirmation("updates");
+  assert.equal(updates.subject, "Confirm your GetBrian Healthy updates");
+});
+
+test("the guide confirmation email promises a weekly tip and does not say two emails a year", async () => {
+  const guide = await capturedConfirmation("guide");
+  assert.match(guide.text, /one short, evidence-checked tip a week/);
+  assert.doesNotMatch(guide.text, /two emails a year/);
+});
+
+test("the updates confirmation email says two emails a year and mentions no guide", async () => {
+  const updates = await capturedConfirmation("updates");
+  assert.match(updates.text, /at most two emails a year/);
+  assert.doesNotMatch(updates.text, /guide/i);
+});
+
+test("the updates confirmation still sends when the guide segment is not set", async () => {
+  setFullEnv();
+  const ok = await withFetch(
+    async () => jsonResponse(200),
+    () => sendConfirmation(READER, "https://site.test", NOW),
+  );
+  assert.equal(ok, true);
+});
+
+// ---------------------------------------------------------------------------
+// Guide list: contacts
+// ---------------------------------------------------------------------------
+
+test("addContact for the guide list adds the contact to the guide segment, not the updates one", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  let capturedBody: unknown;
+  await withFetch(
+    async (_input, init) => {
+      capturedBody = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse(201);
+    },
+    async () => {
+      assert.equal(await addContact(READER, "guide"), true);
+    },
+  );
+  assert.deepEqual(capturedBody, { email: READER, unsubscribed: false, segments: [{ id: "seg_guide" }] });
+});
+
+test("addContact for the guide list refuses and makes no request when the guide segment is not set", async () => {
+  setFullEnv();
+  let called = false;
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => {
+        called = true;
+        return jsonResponse(201);
+      },
+      () => addContact(READER, "guide"),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(called, false);
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "add-contact",
+    status: null,
+    name: "not_configured",
+    missing: ["RESEND_GUIDE_SEGMENT_ID"],
+  });
+});
+
+test("addContact for the guide list on a 409 joins the guide segment, never the updates one", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  const JOIN_GUIDE = "POST https://api.resend.com/contacts/reader%40example.com/segments/seg_guide";
+  const { calls, impl } = recordingFetch({ [CREATE]: 409, [UPDATE]: 200, [JOIN_GUIDE]: 200 });
+  await withFetch(impl, async () => {
+    assert.equal(await addContact(READER, "guide"), true);
+  });
+  assert.deepEqual(calls.map((c) => `${c.method} ${c.url}`), [CREATE, UPDATE, JOIN_GUIDE]);
+});
+
+// ---------------------------------------------------------------------------
+// Guide list: the download email
+// ---------------------------------------------------------------------------
+
+test("sendGuide refuses and makes no request when the guide segment is not set", async () => {
+  setFullEnv();
+  let called = false;
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => {
+        called = true;
+        return jsonResponse(200);
+      },
+      () => sendGuide(READER, "https://site.test"),
+    ),
+  );
+  assert.equal(result, false);
+  assert.equal(called, false);
+  assert.deepEqual(parseLine(lines[0]), {
+    step: "send-guide",
+    status: null,
+    name: "not_configured",
+    missing: ["RESEND_GUIDE_SEGMENT_ID"],
+  });
+});
+
+test("sendGuide emails the reader the guide PDF link on the site", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  let sent = { to: [] as string[], subject: "", text: "" };
+  await withFetch(
+    async (_input, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      sent = { to: body.to, subject: body.subject, text: body.text };
+      return jsonResponse(200);
+    },
+    () => sendGuide(READER, "https://site.test"),
+  );
+  assert.deepEqual(sent.to, [READER]);
+  assert.equal(sent.subject, "Your guide: Energy. Strength. Calm.");
+  assert.ok(sent.text.includes(`https://site.test${GUIDE_PDF_PATH}`), "the email must carry the PDF link");
+});
+
+test("sendGuide returns true when Resend accepts the email", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  const ok = await withFetch(
+    async () => jsonResponse(200),
+    () => sendGuide(READER, "https://site.test"),
+  );
+  assert.equal(ok, true);
+});
+
+test("sendGuide returns false and logs the send-guide step when Resend refuses", async () => {
+  setFullEnv({ RESEND_GUIDE_SEGMENT_ID: "seg_guide" });
+  const { lines, result } = await captureErrors(() =>
+    withFetch(
+      async () => resendError(500, { name: "application_error", message: "try again" }),
+      () => sendGuide(READER, "https://site.test"),
+    ),
+  );
+  assert.equal(result, false);
+  assert.deepEqual(parseLine(lines[0]), { step: "send-guide", status: 500, name: "application_error", message: "try again" });
+  assertNoLeak(lines);
 });

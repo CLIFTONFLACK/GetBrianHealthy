@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
     // Browsers ask for /favicon.ico regardless of the <link> tags in <head>.
     return [{ source: "/favicon.ico", destination: "/healthy/brand/favicon-32.png" }];
   },
+  async headers() {
+    // The guide PDF is US-only and is linked from emails and other sites, where
+    // robots.txt alone does not stop indexing. Keep it out of search results.
+    return [{ source: "/downloads/:file*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }];
+  },
 };
 
 export default nextConfig;

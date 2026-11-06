@@ -80,9 +80,10 @@ export const healthyOpenGraph = {
  * Share cards with a photo: the mark on a white tile over the page's own scene,
  * made by `npm run brand:healthy` (ogOverPhoto) from docs/og/<name>.jpg. The
  * three pages that have one set `images: [ogImages.<name>]` on their openGraph;
- * every other page keeps healthyOpenGraph's mark-on-white card.
+ * every other page keeps healthyOpenGraph's mark-on-white card. The guide's
+ * card (the ebook cover on navy) is rendered from the PDF, not by that script.
  */
-const ogCard = (name: "home" | "routine" | "method", alt: string) => ({
+const ogCard = (name: "home" | "routine" | "method" | "guide", alt: string) => ({
   url: `/healthy/brand/og-${name}.jpg`,
   width: 1200,
   height: 630,
@@ -92,6 +93,7 @@ export const ogImages = {
   home: ogCard("home", "GetBrian Healthy: a glass of water on a shelf under a lamp, by a rain-streaked window"),
   routine: ogCard("routine", "GetBrian Healthy daily routine: a glass of water, a mug and trainers on a kitchen worktop"),
   method: ogCard("method", "How GetBrian Healthy chooses: a notebook, a magnifying glass and reading glasses on a desk"),
+  guide: ogCard("guide", "Free guide from GetBrian Healthy: Energy. Strength. Calm."),
 };
 
 export async function generateMetadata(): Promise<Metadata> {
