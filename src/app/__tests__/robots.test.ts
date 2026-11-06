@@ -9,8 +9,9 @@ function asList(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : value === undefined ? [] : [value];
 }
 
-test("disallows crawling the Buy-button redirect path", () => {
+test("disallows crawling only the Buy-button redirect path", () => {
   const rules = robots().rules as Rules;
+  // Not /downloads/: the guide PDF's noindex header only works if crawlers can fetch it.
   assert.deepEqual(asList(rules.disallow), ["/go/"]);
 });
 

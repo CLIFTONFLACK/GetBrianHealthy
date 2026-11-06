@@ -20,14 +20,19 @@ function mockRedirect(target: string): never {
   throw new Error(`NEXT_REDIRECT:${target}`);
 }
 
-let sendConfirmationImpl: (email: string, siteUrl: string, now?: number) => Promise<boolean>;
+let sendConfirmationImpl: (email: string, siteUrl: string, now?: number, list?: "updates" | "guide") => Promise<boolean>;
 let addContactImpl: (email: string) => Promise<boolean>;
 let verifyConfiguredTokenImpl: (token: unknown, now?: number) => string | null;
 
+let sendGuideImpl: (email: string, siteUrl: string) => Promise<boolean>;
+let tokenList: "updates" | "guide" = "updates";
+
 const sendConfirmationCalls: unknown[][] = [];
 const addContactCalls: unknown[][] = [];
+const sendGuideCalls: unknown[][] = [];
 
 let subscribe: typeof import("../actions.ts")["subscribe"];
+let requestGuide: typeof import("../actions.ts")["requestGuide"];
 let confirmSubscription: typeof import("../actions.ts")["confirmSubscription"];
 
 test.before(async () => {
@@ -44,19 +49,57 @@ test.before(async () => {
   mock.module(new URL("../newsletter.ts", import.meta.url), {
     exports: {
       ...realNewsletter,
-      sendConfirmation: async (...args: [string, string, number?]) => {
+      sendConfirmation: async (...args: [string, string, number?, ("updates" | "guide")?]) => {
         sendConfirmationCalls.push(args);
         return sendConfirmationImpl(...args);
       },
-      addContact: async (...args: [string]) => {
+      addContact: async (...args: [string, ("updates" | "guide")?]) => {
         addContactCalls.push(args);
-        return addContactImpl(...args);
+        return addContactImpl(args[0]);
+      },
+      sendGuide: async (...args: [string, string]) => {
+        sendGuideCalls.push(args);
+        return sendGuideImpl(...args);
       },
       verifyConfiguredToken: (...args: [unknown, number?]) => verifyConfiguredTokenImpl(...args),
+      // The action reads email and list together; the list comes from `tokenList`.
+      readConfiguredToken: (...args: [unknown, number?]) => {
+        const email = verifyConfiguredTokenImpl(...args);
+        return email ? { email, list: tokenList } : null;
+      },
     },
   });
 
-  ({ subscribe, confirmSubscription } = await import("../actions.ts"));
+  // getRegion reads request cookies and headers, which do not exist under node:test.
+  mock.module(new URL("../region-server.ts", import.meta.url), {
+    exports: { getRegion: async () => region },
+  });
+
+  ({ subscribe, requestGuide, confirmSubscription } = await import("../actions.ts"));
+});
+
+let region: "US" | "GB" = "US";
+
+test("requestGuide refuses a UK visitor without sending any email", async () => {
+  region = "GB";
+  sendConfirmationImpl = async () => true;
+  try {
+    assert.deepEqual(await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" })), { status: "error" });
+    assert.equal(sendConfirmationCalls.length, 0);
+  } finally {
+    region = "US";
+  }
+});
+
+test("subscribe (the updates list) still works for a UK visitor", async () => {
+  region = "GB";
+  sendConfirmationImpl = async () => true;
+  try {
+    assert.deepEqual(await subscribe({ status: "idle" }, formData({ email: "reader@example.com" })), { status: "sent" });
+    assert.equal(sendConfirmationCalls.length, 1);
+  } finally {
+    region = "US";
+  }
 });
 
 test.beforeEach(() => {
@@ -72,6 +115,9 @@ test.beforeEach(() => {
   verifyConfiguredTokenImpl = () => {
     throw new Error("verifyConfiguredToken not stubbed for this test");
   };
+  sendGuideCalls.length = 0;
+  sendGuideImpl = async () => true;
+  tokenList = "updates";
 });
 
 function formData(fields: Record<string, string>): FormData {
@@ -173,8 +219,9 @@ test("confirmSubscription adds the contact and redirects to the done page on suc
   addContactImpl = async () => true;
   await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
   assert.equal(addContactCalls.length, 1);
-  assert.deepEqual(addContactCalls[0], ["reader@example.com"]);
+  assert.deepEqual(addContactCalls[0], ["reader@example.com", "updates"]);
   assert.deepEqual(redirectCalls, [{ target: "/confirm?done=1" }]);
+  assert.equal(sendGuideCalls.length, 0, "an updates sign-up is never sent the guide");
 });
 
 test("confirmSubscription redirects to the error page when addContact reports failure", async () => {
@@ -191,4 +238,130 @@ test("confirmSubscription redirects to the error page when addContact throws", a
   };
   await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
   assert.deepEqual(redirectCalls, [{ target: "/confirm?error=1" }]);
+});
+
+// ---------------------------------------------------------------------------
+// subscribe — updates list is never the guide list
+// ---------------------------------------------------------------------------
+
+test("subscribe asks for the updates list, never the guide list", async () => {
+  sendConfirmationImpl = async () => true;
+  await subscribe({ status: "idle" }, formData({ email: "reader@example.com" }));
+  assert.notEqual(sendConfirmationCalls[0][3], "guide");
+});
+
+// ---------------------------------------------------------------------------
+// requestGuide — the free-guide form
+// ---------------------------------------------------------------------------
+
+test("requestGuide sends the confirmation for the guide list", async () => {
+  sendConfirmationImpl = async () => true;
+  const result = await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" }));
+  assert.deepEqual(result, { status: "sent" });
+  assert.equal(sendConfirmationCalls.length, 1);
+  assert.equal(sendConfirmationCalls[0][3], "guide");
+});
+
+test("requestGuide never reads the list from the form: a posted list field is ignored", async () => {
+  sendConfirmationImpl = async () => true;
+  await requestGuide({ status: "idle" }, formData({ email: "reader@example.com", list: "updates" }));
+  assert.equal(sendConfirmationCalls[0][3], "guide");
+});
+
+test("requestGuide returns 'error' when the guide confirmation is refused", async () => {
+  sendConfirmationImpl = async () => false;
+  const result = await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" }));
+  assert.deepEqual(result, { status: "error" });
+});
+
+test("requestGuide returns 'error' when sendConfirmation throws", async () => {
+  sendConfirmationImpl = async () => {
+    throw new Error("network exploded");
+  };
+  const result = await requestGuide({ status: "idle" }, formData({ email: "reader@example.com" }));
+  assert.deepEqual(result, { status: "error" });
+});
+
+test("requestGuide returns 'sent' without sending when the honeypot field is filled", async () => {
+  const result = await requestGuide(
+    { status: "idle" },
+    formData({ website: "https://spam.example.com", email: "reader@example.com" }),
+  );
+  assert.deepEqual(result, { status: "sent" });
+  assert.equal(sendConfirmationCalls.length, 0);
+});
+
+test("requestGuide returns 'invalid' for a malformed address and sends nothing", async () => {
+  const result = await requestGuide({ status: "idle" }, formData({ email: "not-an-email" }));
+  assert.deepEqual(result, { status: "invalid" });
+  assert.equal(sendConfirmationCalls.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// confirmSubscription — guide list
+// ---------------------------------------------------------------------------
+
+test("confirmSubscription adds a guide reader to the guide list and redirects to the guide done page", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => true;
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.deepEqual(addContactCalls, [["reader@example.com", "guide"]]);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?done=guide" }]);
+});
+
+test("confirmSubscription emails a guide reader the download link exactly once", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => true;
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.deepEqual(sendGuideCalls, [["reader@example.com", FAKE_SITE_URL]]);
+});
+
+test("confirmSubscription still redirects a guide reader to the guide done page when the guide email is refused", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => true;
+  sendGuideImpl = async () => false;
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?done=guide" }]);
+});
+
+test("confirmSubscription still redirects a guide reader to the guide done page when the guide email throws", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => true;
+  sendGuideImpl = async () => {
+    throw new Error("resend down for guide");
+  };
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?done=guide" }]);
+});
+
+test("confirmSubscription sends no guide email when adding the guide reader fails", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => false;
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.equal(sendGuideCalls.length, 0);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?error=1" }]);
+});
+
+test("confirmSubscription sends no guide email for an invalid token", async () => {
+  tokenList = "guide";
+  verifyConfiguredTokenImpl = () => null;
+  await assert.rejects(() => confirmSubscription(formData({ t: "forged" })), /NEXT_REDIRECT/);
+  assert.equal(addContactCalls.length, 0);
+  assert.equal(sendGuideCalls.length, 0);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?error=1" }]);
+});
+
+test("confirmSubscription never emails the guide to an updates reader, even when that email would succeed", async () => {
+  tokenList = "updates";
+  verifyConfiguredTokenImpl = () => "reader@example.com";
+  addContactImpl = async () => true;
+  sendGuideImpl = async () => true;
+  await assert.rejects(() => confirmSubscription(formData({ t: "valid-token" })), /NEXT_REDIRECT/);
+  assert.equal(sendGuideCalls.length, 0);
+  assert.deepEqual(redirectCalls, [{ target: "/confirm?done=1" }]);
 });

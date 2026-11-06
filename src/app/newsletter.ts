@@ -10,6 +10,12 @@
  *
  * The whole feature is off until every variable below is set in the
  * deployment environment; the landing page hides the form while it is off.
+ *
+ * A second list, "guide", runs through the same flow for the free ebook on
+ * /guide. Its readers agree to something different (the guide plus a weekly
+ * tip, not "two emails a year"), so they join their own segment,
+ * RESEND_GUIDE_SEGMENT_ID, and the guide form stays off until that is set too.
+ * The list travels inside the signed token, so it cannot be swapped later.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -17,7 +23,13 @@ const RESEND_API = "https://api.resend.com";
 /** How long a confirmation link stays valid. */
 export const TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
 
-type Config = { apiKey: string; segmentId: string; secret: string; from: string };
+/** Which list a reader asked to join. */
+export type List = "updates" | "guide";
+
+/** Where the guide PDF is served from (public/downloads). */
+export const GUIDE_PDF_PATH = "/downloads/energy-strength-calm.pdf";
+
+type Config = { apiKey: string; segmentId: string; guideSegmentId: string | null; secret: string; from: string };
 
 function config(): Config | null {
   const apiKey = process.env.RESEND_API_KEY;
@@ -26,11 +38,21 @@ function config(): Config | null {
   const from = process.env.NEWSLETTER_FROM;
   // A short secret would make tokens guessable, so treat it as "not configured".
   if (!apiKey || !segmentId || !secret || secret.length < 32 || !from) return null;
-  return { apiKey, segmentId, secret, from };
+  return { apiKey, segmentId, guideSegmentId: process.env.RESEND_GUIDE_SEGMENT_ID || null, secret, from };
 }
 
 export function signupEnabled(): boolean {
   return config() !== null;
+}
+
+/** The guide form needs everything the updates form needs, plus its own segment. */
+export function guideSignupEnabled(): boolean {
+  return Boolean(config()?.guideSegmentId);
+}
+
+/** The Resend segment for a list, or null when that list is not configured. */
+function segmentFor(c: Config, list: List): string | null {
+  return list === "guide" ? c.guideSegmentId : c.segmentId;
 }
 
 /** Lower-cased, trimmed address, or null when it is not a plausible email. */
@@ -45,14 +67,19 @@ function mac(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-/** `<payload>.<signature>`, where the payload holds the email and an expiry time. */
-export function signToken(email: string, now: number, secret: string): string {
-  const payload = Buffer.from(JSON.stringify({ e: email, x: now + TOKEN_TTL_MS })).toString("base64url");
+/**
+ * `<payload>.<signature>`, where the payload holds the email, an expiry time
+ * and, for the guide list only, `l: "guide"`. Updates tokens keep the original
+ * shape, so links already sent keep working.
+ */
+export function signToken(email: string, now: number, secret: string, list: List = "updates"): string {
+  const body = list === "guide" ? { e: email, x: now + TOKEN_TTL_MS, l: "guide" } : { e: email, x: now + TOKEN_TTL_MS };
+  const payload = Buffer.from(JSON.stringify(body)).toString("base64url");
   return `${payload}.${mac(payload, secret)}`;
 }
 
-/** The email inside a valid, unexpired token, or null. */
-export function verifyToken(token: unknown, now: number, secret: string): string | null {
+/** The email and list inside a valid, unexpired token, or null. */
+export function readToken(token: unknown, now: number, secret: string): { email: string; list: List } | null {
   if (typeof token !== "string" || token.length > 1024) return null;
   const [payload, sig, extra] = token.split(".");
   if (!payload || !sig || extra !== undefined) return null;
@@ -60,16 +87,22 @@ export function verifyToken(token: unknown, now: number, secret: string): string
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   try {
-    const { e, x } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    const { e, x, l } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (typeof x !== "number" || x < now) return null;
-    return normalizeEmail(e);
+    const email = normalizeEmail(e);
+    return email ? { email, list: l === "guide" ? "guide" : "updates" } : null;
   } catch {
     return null;
   }
 }
 
+/** The email inside a valid, unexpired token, or null. */
+export function verifyToken(token: unknown, now: number, secret: string): string | null {
+  return readToken(token, now, secret)?.email ?? null;
+}
+
 /** Which Resend call a diagnostic log line is about. */
-type Step = "send-email" | "add-contact" | "add-contact/resubscribe" | "add-contact/join-segment";
+type Step = "send-email" | "send-guide" | "add-contact" | "add-contact/resubscribe" | "add-contact/join-segment";
 
 /**
  * Removes anything that identifies a reader or grants access from text taken
@@ -140,10 +173,11 @@ function logThrown(step: Step, err: unknown): void {
 }
 
 /** Names of the missing or unusable variables (never their values). */
-function logNotConfigured(step: Step): void {
+function logNotConfigured(step: Step, list: List = "updates"): void {
   const missing = [
     ["RESEND_API_KEY", !process.env.RESEND_API_KEY],
     ["RESEND_SEGMENT_ID", !process.env.RESEND_SEGMENT_ID],
+    ["RESEND_GUIDE_SEGMENT_ID", list === "guide" && !process.env.RESEND_GUIDE_SEGMENT_ID],
     ["NEWSLETTER_SECRET", !process.env.NEWSLETTER_SECRET || process.env.NEWSLETTER_SECRET.length < 32],
     ["NEWSLETTER_FROM", !process.env.NEWSLETTER_FROM],
   ]
@@ -185,29 +219,81 @@ async function resend(
   return res;
 }
 
-/** Sends the confirmation email. Returns false if Resend refused it or the feature is off. */
-export async function sendConfirmation(email: string, siteUrl: string, now = Date.now()): Promise<boolean> {
+/** The confirmation email for each list: what the reader asked for and what they agree to. */
+function confirmationEmail(list: List, link: string): { subject: string; lines: string[] } {
+  if (list === "guide") {
+    return {
+      subject: "Confirm to get your free guide",
+      lines: [
+        "Someone (hopefully you) asked for Brian's free guide, Energy. Strength. Calm.",
+        "",
+        `Confirm here and the download link is yours: ${link}`,
+        "",
+        "You'll also get one short, evidence-checked tip a week. Every email has an unsubscribe link. If this wasn't you, ignore this email and nothing will be sent.",
+      ],
+    };
+  }
+  return {
+    subject: "Confirm your GetBrian Healthy updates",
+    lines: [
+      "Someone (hopefully you) asked to hear from GetBrian Healthy when one of Brian's supplement picks changes.",
+      "",
+      `Confirm here: ${link}`,
+      "",
+      "That's at most two emails a year, nothing else. If this wasn't you, ignore this email and nothing will be sent.",
+    ],
+  };
+}
+
+/** Sends the confirmation email. Returns false if Resend refused it or the list is off. */
+export async function sendConfirmation(
+  email: string,
+  siteUrl: string,
+  now = Date.now(),
+  list: List = "updates",
+): Promise<boolean> {
   const c = config();
-  if (!c) {
-    logNotConfigured("send-email");
+  if (!c || !segmentFor(c, list)) {
+    logNotConfigured("send-email", list);
     return false;
   }
-  const link = `${siteUrl}/confirm?t=${encodeURIComponent(signToken(email, now, c.secret))}`;
+  const link = `${siteUrl}/confirm?t=${encodeURIComponent(signToken(email, now, c.secret, list))}`;
+  const { subject, lines } = confirmationEmail(list, link);
+  const text = ["Hi,", "", ...lines, "", "Brian"].join("\n");
+  const res = await resend("send-email", "/emails", c.apiKey, { from: c.from, to: [email], subject, text });
+  return res.ok;
+}
+
+/**
+ * Sends the guide's download link once the reader has confirmed, so they have
+ * it in their inbox as well as on the page. Returns false on any failure; the
+ * caller shows the link on the page either way.
+ */
+export async function sendGuide(email: string, siteUrl: string): Promise<boolean> {
+  const c = config();
+  if (!c?.guideSegmentId) {
+    logNotConfigured("send-guide", "guide");
+    return false;
+  }
   const text = [
     "Hi,",
     "",
-    "Someone (hopefully you) asked to hear from GetBrian Healthy when one of Brian's supplement picks changes.",
+    "Here's your free guide, Energy. Strength. Calm. Download it here:",
+    `${siteUrl}${GUIDE_PDF_PATH}`,
     "",
-    `Confirm here: ${link}`,
+    "Start with page 4, How Brian audits a supplement. It shows the three red flags to look for on any label.",
     "",
-    "That's at most two emails a year, nothing else. If this wasn't you, ignore this email and nothing will be sent.",
+    "When you're ready, Brian's current picks are here:",
+    siteUrl,
+    "",
+    "General information, not medical advice. Talk to your doctor before starting a supplement.",
     "",
     "Brian",
   ].join("\n");
-  const res = await resend("send-email", "/emails", c.apiKey, {
+  const res = await resend("send-guide", "/emails", c.apiKey, {
     from: c.from,
     to: [email],
-    subject: "Confirm your GetBrian Healthy updates",
+    subject: "Your guide: Energy. Strength. Calm.",
     text,
   });
   return res.ok;
@@ -219,17 +305,18 @@ export async function sendConfirmation(email: string, siteUrl: string, now = Dat
  * unsubscribing), and the create call applied neither the segment nor
  * `unsubscribed: false`. In that case both are set explicitly.
  */
-export async function addContact(email: string): Promise<boolean> {
+export async function addContact(email: string, list: List = "updates"): Promise<boolean> {
   const c = config();
-  if (!c) {
-    logNotConfigured("add-contact");
+  const segmentId = c && segmentFor(c, list);
+  if (!c || !segmentId) {
+    logNotConfigured("add-contact", list);
     return false;
   }
   const res = await resend(
     "add-contact",
     "/contacts",
     c.apiKey,
-    { email, unsubscribed: false, segments: [{ id: c.segmentId }] },
+    { email, unsubscribed: false, segments: [{ id: segmentId }] },
     "POST",
     [409],
   );
@@ -240,7 +327,7 @@ export async function addContact(email: string): Promise<boolean> {
   if (!resubscribed.ok) return false;
   const joined = await resend(
     "add-contact/join-segment",
-    `${contact}/segments/${encodeURIComponent(c.segmentId)}`,
+    `${contact}/segments/${encodeURIComponent(segmentId)}`,
     c.apiKey,
     undefined,
     "POST",
@@ -252,6 +339,11 @@ export async function addContact(email: string): Promise<boolean> {
 
 /** Exposed so the confirm action can verify with the configured secret. */
 export function verifyConfiguredToken(token: unknown, now = Date.now()): string | null {
+  return readConfiguredToken(token, now)?.email ?? null;
+}
+
+/** The email and list in a token, checked with the configured secret. */
+export function readConfiguredToken(token: unknown, now = Date.now()): { email: string; list: List } | null {
   const c = config();
-  return c ? verifyToken(token, now, c.secret) : null;
+  return c ? readToken(token, now, c.secret) : null;
 }

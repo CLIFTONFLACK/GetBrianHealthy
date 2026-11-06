@@ -16,6 +16,7 @@ test("lists every indexable section page and the US product pages, nothing else"
     `${siteUrl}/method`,
     `${siteUrl}/why-these-picks`,
     `${siteUrl}/routine`,
+    `${siteUrl}/guide`,
     `${siteUrl}/about`,
     `${siteUrl}/disclosures`,
     `${siteUrl}/products/pure-encapsulations-magnesium-glycinate`,
