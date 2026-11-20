@@ -122,11 +122,9 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
       />
 
       {/* HERO: name, brand and packshot up top, so the reader knows what they are reading about
-          before the Buy button sends them to the retailer. Dark band over the goal photo; below
-          1544px it pulls up under the floating Menu (<main>'s pt-16) and pads that back itself.
-          From 1544px the frosted side menu (layout.tsx) is on screen instead, and it only reads
-          on a light page, so the band becomes a card inside the content column, clear of it. */}
-      <header className="relative isolate overflow-hidden bg-slate-950 text-white -mt-16 min-[1544px]:mx-auto min-[1544px]:mt-8 min-[1544px]:max-w-6xl min-[1544px]:rounded-3xl">
+          before the Buy button sends them to the retailer. Dark band over the goal photo,
+          starting right under the site header (layout.tsx), which is in the page flow. */}
+      <header className="relative isolate overflow-hidden bg-slate-950 text-white">
         {heroImage && (
           <div
             className="animate-kinetic-hero-zoom absolute inset-0 -z-20 bg-cover bg-center opacity-70"
@@ -137,7 +135,7 @@ export default async function ProductPage(props: PageProps<"/products/[slug]">) 
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950 via-slate-950/80 to-kinetic-primary/50" aria-hidden="true" />
         <div className="blob blob-kinetic-cyan pointer-events-none absolute -right-24 -bottom-32 -z-10 h-96 w-96" aria-hidden="true" />
 
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-20 pb-14 sm:px-6 sm:pt-24 sm:pb-16 lg:grid-cols-[1fr_20rem] lg:pt-28 min-[1544px]:pt-14">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-10 pb-14 sm:px-6 sm:pt-12 sm:pb-16 lg:grid-cols-[1fr_20rem] lg:pt-14">
           <div className="animate-fade-in-up min-w-0">
             <nav aria-label="Breadcrumb" className="text-base">
               <Link href="/#picks" className="text-kinetic-teal-on-dark underline underline-offset-4 hover:text-white">

@@ -273,11 +273,10 @@ test("there is exactly one @media print block", () => {
   assert.equal((css.match(/@media print/g) ?? []).length, 1);
 });
 
-test("the print block holds exactly the three routine-scoped rules, so the scope check below cannot pass vacuously", () => {
+test("the print block holds exactly the two routine-scoped rules, so the scope check below cannot pass vacuously", () => {
   assert.deepEqual(printSelectors, [
     "body:has([data-routine-page]) [data-chrome]",
     "body:has([data-routine-page])",
-    "body:has([data-routine-page]) main",
   ]);
 });
 

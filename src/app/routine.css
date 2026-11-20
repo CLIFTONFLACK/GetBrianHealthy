@@ -175,11 +175,6 @@
   body:has([data-routine-page]) {
     background: #fff;
   }
-
-  /* <main> keeps clearance for the floating menu on screen; on paper it would push the sheet onto a second page. */
-  body:has([data-routine-page]) main {
-    padding: 0 !important;
-  }
 }
 
 .rt-sheet {

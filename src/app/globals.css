@@ -109,11 +109,9 @@
 html {
   color-scheme: light;
   scroll-behavior: smooth;
-  /* The header is fixed, so a plain #anchor jump lands with the target's first
-     line tucked under it. Offsetting the scroll port by the header's height
-     plus its top inset fixes every in-page link at once, including the ones
-     the mobile sheet now exposes. */
-  scroll-padding-top: 6rem;
+  /* The header scrolls away with the page, so nothing covers an #anchor target and
+     no global scroll-padding is needed. Targets keep their own scroll-mt-* (some
+     breathing room; the routine steps clear the sticky day bar). */
 }
 
 body {

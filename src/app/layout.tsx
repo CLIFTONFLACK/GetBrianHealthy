@@ -7,6 +7,7 @@ import { AMAZON_ASSOCIATE_STATEMENT, LAUNCHED, PROGRAM_NAME } from "./data";
 import { Icon } from "./icons";
 import { getRegion } from "./region-server";
 import { RegionSwitch } from "./region-switch";
+import { SiteHeader } from "./site-header";
 import { parentSiteUrl, siteUrl } from "./site";
 import "./globals.css";
 
@@ -123,21 +124,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const nav = [
-  { href: "/", label: "Home" },
-  { href: "/#picks", label: "Brian's picks" },
-  { href: "/method", label: "How Brian picks" },
-  { href: "/routine", label: "Daily routine" },
-  { href: "/guide", label: "Free guide" },
-  { href: "/about", label: "About" },
-  { href: "/about#contact", label: "Contact" },
-];
-
 const linkClass =
   "inline-flex min-h-11 items-center rounded-lg px-3 text-base font-medium text-fg-muted transition-colors duration-200 hover:text-brand-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kinetic-primary-electric";
-
-/** Links in the floating side menu: compact full-width rows with a teal tint on hover. */
-const sideLinkClass = `${linkClass} min-h-10 w-full px-3 text-sm hover:bg-kinetic-primary-light/70`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const region = await getRegion();
@@ -147,36 +135,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <div
       className={`${bricolage.variable} ${plusJakartaSans.variable} flex min-h-full flex-1 flex-col text-[1.0625rem] sm:text-lg`}
     >
-      {/* Wide screens: a small frosted menu floating at the left edge, centred
-          vertically so it stays clear of each page's opening heading. The page
-          itself runs full width underneath it, so the menu only shows once it
-          fits in the margin beside the content: it ends at 172px (left-3 +
-          w-40). Product pages pad outside their max-w-6xl container, so their
-          content starts right at (page width - 72rem) / 2, and the breakpoint
-          counts a ~15px scrollbar the page width does not: 1544px is the
-          first width with a 16px gap on every page (measured, not assumed).
-          Below that the Menu button further down takes over. */}
-      <aside data-chrome className="fixed top-1/2 left-3 z-40 hidden w-40 -translate-y-1/2 flex-col rounded-2xl border border-white/60 bg-white/65 p-1.5 shadow-[0_8px_30px_rgba(10,29,59,0.12)] backdrop-blur-md min-[1544px]:flex">
-        <Link
-          href="/"
-          aria-label="GetBrian Healthy home"
-          className="mb-1 flex min-h-11 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kinetic-primary-electric"
-        >
-          <Image src="/healthy/brand/healthy-mark.png" alt="" aria-hidden="true" width={40} height={34} unoptimized className="h-7 w-auto" />
-        </Link>
-        <nav aria-label="Healthy">
-          <ul className="space-y-0.5">
-            {nav.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className={sideLinkClass}>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-
       <div className="group/page flex flex-1 flex-col">
       {/* FTC guidance and iHerb's terms both want the disclosure up front, above the fold.
           The legal sentence and its link are unchanged from before this reskin.
@@ -197,37 +155,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         </div>
       </div>
 
-      {/* Narrower screens: a floating Menu button (the sidebar above takes over
-          from 1544px). The sticky wrapper is zero-height so it takes no space;
-          <main>'s top padding keeps it clear of each page's first line. */}
-      <header data-chrome className="pointer-events-none sticky top-0 z-40 h-0 min-[1544px]:hidden">
-        <div className="mx-auto mt-3 flex max-w-6xl justify-end px-4 sm:px-6">
-          <div className="pointer-events-auto flex items-center rounded-full border border-slate-200/80 bg-white/85 p-1.5 shadow-[0_8px_30px_rgba(10,29,59,0.12)] backdrop-blur-md">
-            {/* No-JS disclosure menu. */}
-            <details className="group relative">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-full px-5 font-semibold text-brand-navy [&::-webkit-details-marker]:hidden">
-                Menu
-              </summary>
-              <nav
-                aria-label="Healthy"
-                className="absolute right-0 z-50 mt-3 w-56 rounded-2xl border border-border bg-bg p-2 shadow-lg"
-              >
-                <ul>
-                  {nav.map((item) => (
-                    <li key={item.href}>
-                      <Link href={item.href} className={`${linkClass} w-full`}>
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </details>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
-      <main className="flex-1 pt-16 min-[1544px]:pt-0">{children}</main>
+      <main className="flex-1">{children}</main>
 
       {/* On a page with the fixed phone purchase bar (data-buy-bar), the footer
           pads itself so its last line clears the bar. */}

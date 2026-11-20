@@ -71,11 +71,10 @@ export default async function HealthyHome() {
       {/* HERO: the looping three-scene clip (hero-video.tsx) runs full-bleed behind
           the section on large screens, feathered to white on the left so the
           lockup and copy read over it. On small screens its square cut sits as a
-          band under the copy, feathered at the top. On large
-          screens below 1544px the section pulls up over <main>'s pt-16 (the
-          floating Menu's clearance) so the photo starts at the top of the page,
-          and adds that 4rem back to its own padding to keep the copy clear. */}
-      <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-3 sm:pt-10 lg:-mt-16 lg:flex lg:min-h-[680px] lg:items-start lg:pt-28 lg:pb-20 min-[1544px]:mt-0 min-[1544px]:pt-12">
+          band under the copy, feathered at the top. The section starts right
+          under the site header (layout.tsx), which is in the page flow, so it
+          needs no pull-up or extra top padding. */}
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-3 sm:pt-10 lg:flex lg:min-h-[680px] lg:items-start lg:pt-12 lg:pb-20">
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="flex flex-col space-y-6 lg:max-w-[36rem]">
             {/* Brand lockup: the mark and "GetBrian Healthy" lead the page. The

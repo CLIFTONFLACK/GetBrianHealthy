@@ -338,7 +338,7 @@ export function RoutinePlanner({
       {/* THE DAY */}
       <section aria-labelledby="rt-day-heading" className="border-b border-slate-200 bg-white pb-16 sm:pb-24 print:hidden">
         {/* Sticky day bar: Brian walks along it to whichever step is on screen. */}
-        <div className="sticky top-[4.5rem] z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md min-[1544px]:top-0">
+        <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2 sm:gap-5 sm:px-6">
             <button
               type="button"

@@ -25,11 +25,10 @@ export default function MethodPage() {
       {/* HERO: the "How Brian decides" loop runs full-bleed behind the section from
           lg up, feathered to white on the left so the heading reads over it (the
           panel sits in the right half of the frame). Below lg the tall cut is a
-          band under the heading, cropped around the panel. The same pull-up as the
-          home hero: the section rises over <main>'s pt-16 (the floating Menu's
-          clearance) and adds it back to its own padding. The words in the clip are
+          band under the heading, cropped around the panel. Like the home hero, it
+          starts right under the site header, which is in the page flow. The words in the clip are
           process only, so one file serves both the UK and US sites. */}
-      <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-12 sm:pt-16 lg:-mt-16 lg:flex lg:min-h-[max(40rem,40vw)] lg:items-center lg:pt-28 lg:pb-16 min-[1544px]:mt-0 min-[1544px]:pt-16">
+      <section className="relative overflow-hidden border-b border-slate-200 bg-white pt-12 sm:pt-16 lg:flex lg:min-h-[max(40rem,40vw)] lg:items-center lg:pt-16 lg:pb-16">
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="lg:max-w-[28rem]">
             <PageHeading
