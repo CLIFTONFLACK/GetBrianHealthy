@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import Link from "next/link";
 import { JobRail } from "../job-rail.tsx";
 import { ProductCard, supplementHref } from "../components.tsx";
-import { faqs, getSupplement, localizeGoal, localizeSupplement, productsFor, tileGoals, type Product } from "../data.ts";
+import { faqs, getSupplement, localizeTile, localizeSupplement, productsFor, tileGoals, type Product } from "../data.ts";
 import type { Region } from "../region.ts";
 
 // page.tsx pulls in signup -> actions -> the root layout (next/font/google, a
@@ -145,7 +145,7 @@ test("every rail card links to the Amazon store and tag of the visitor's country
 
 function closingLinks(region: Region = "US"): El[] {
   const labels = tileGoals.map((g) => {
-    const goal = localizeGoal(g, region);
+    const goal = localizeTile(g, region);
     return `${goal.label}: ${localizeSupplement(getSupplement(goal.supplement), region).name}`;
   });
   return homeLinks(region).filter((el) => labels.includes(textOf(el).trim()));

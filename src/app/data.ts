@@ -312,18 +312,19 @@ const GB_SUPPLEMENT_COPY: Partial<Record<Supplement["id"], Partial<Supplement>>>
   },
 };
 
-// The labels stay Strength and Calm in both regions (Clifton, 2026-11-05); only the hook and eyebrow differ in Great Britain.
+// Neutral wording for Great Britain. It applies to the job rail, product pages, the routine picker and the
+// creatine page sidebar. The homepage tiles do NOT use it: they show the US copy (see localizeTile).
 const GB_GOAL_COPY: Partial<Record<Goal, Partial<(typeof goals)[number]>>> = {
   strength: {
     hook: "Do short, intense bursts of exercise? Meet creatine, the most-studied ingredient for them.",
     eyebrowDetail: "High-Intensity Exercise",
   },
-  // The US hook and "Cognition" eyebrow make a claim that is not authorised here, so only the label is shared.
+  // Outside the tiles, the US hook and "Cognition" eyebrow are replaced with neutral wording.
   focus: {
     hook: "Curious what else creatine has been studied for? Early research only, nothing proven.",
     eyebrowDetail: "Early Research",
     imageAlt: "A woman working at a desk",
-    // The UK creatine card carries no caveat, so the tile opens the page at the top, next to the hedge, not on the card.
+    // Job rail and product pages only: the homepage Focus tile gets its own no-hash link from localizeTile.
     section: undefined,
   },
   calm: {
@@ -356,6 +357,16 @@ export function localizeSupplement(s: Supplement, region: Region): Supplement {
 /** A goal as a region's visitor should read it. */
 export function localizeGoal<G extends (typeof goals)[number]>(g: G, region: Region): G {
   return region === "GB" ? { ...g, ...GB_GOAL_COPY[g.id] } : g;
+}
+
+/**
+ * A homepage tile as a region's visitor should read it. Clifton's choice (2026-11-20): the tile copy
+ * (label, hook, eyebrow, icon, image alt) is the same in Great Britain as in the US.
+ * Navigation is the one difference: the UK creatine card has no caveat, so the Focus tile opens
+ * the creatine page at the top.
+ */
+export function localizeTile<G extends (typeof goals)[number]>(g: G, region: Region): G {
+  return region === "GB" && g.id === "focus" ? { ...g, section: undefined } : g;
 }
 
 /** The supplement a product reviews, if any. */

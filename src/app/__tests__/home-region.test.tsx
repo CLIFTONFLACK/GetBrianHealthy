@@ -79,15 +79,22 @@ test("sanity: the expanding walk reaches card and goal text, so the absence chec
 // GB: nothing that amounts to an unauthorised claim
 // ---------------------------------------------------------------------------
 
-// Strength, Focus and Calm are the tile labels in both countries (Clifton, 2026-11-05).
-// What stays out of the GB page is the wording under the labels.
+// Clifton, 2026-11-20: the three goal tiles show the US copy to UK visitors too.
+// The wording outside the tiles (job rail, product cards, hero line) stays neutral in GB.
 
-test("GB home page has a 'Focus' tile, with neither the US hook nor the 'Cognition' eyebrow", () => {
+test("GB home page shows the US Focus tile copy: US hook and 'Cognition' eyebrow", () => {
   const gb = text("GB");
   assert.match(gb, /Focus/);
-  assert.match(gb, /Curious what else creatine has been studied for/);
-  assert.doesNotMatch(gb, /Creatine for your brain|Cognition|brain/i);
-  assert.match(text("US"), /Creatine for your brain/);
+  assert.match(gb, /Creatine for your brain\? Promising, not proven/);
+  assert.match(gb, /Cognition/);
+  assert.doesNotMatch(gb, /Curious what else creatine has been studied for|Early Research/);
+});
+
+test("GB home page shows the US Calm tile copy: US hook and 'Wind-Down' eyebrow", () => {
+  const gb = text("GB");
+  assert.match(gb, /Still wired at 10pm/);
+  assert.match(gb, /Wind-Down/);
+  assert.doesNotMatch(gb, /Meet L-theanine, an amino acid found naturally in tea/);
 });
 
 test("GB home page does not render the US creatine strapline 'Strength and physical performance'", () => {
@@ -105,32 +112,34 @@ test("US home page keeps 'Strength, Focus and Calm When You Need It Most' in the
   assert.match(text("US"), /Strength, Focus and Calm When You Need It Most/);
 });
 
-test("GB home page renders no calm/relax/stress/sleep wording from the goals or supplements", () => {
+test("GB home page renders no calm/relax/stress wording from the supplement cards (tiles excepted)", () => {
   const gb = text("GB");
-  assert.doesNotMatch(gb, /Calm and relaxation|Support your wind-down|Still wired at 10pm|managing everyday stress/);
+  assert.doesNotMatch(gb, /Calm and relaxation|Support your wind-down|managing everyday stress/);
 });
 
 function iconCount(region: Region, name: string): number {
   return elements(region).filter((el) => el.type === Icon && el.props.name === name).length;
 }
 
-test("GB home page has no moon icon anywhere: the calm tile no longer hints at sleep", () => {
-  assert.equal(iconCount("GB", "moon"), 0);
+test("GB home page keeps the moon icon on the calm tile, like the US page", () => {
+  assert.ok(iconCount("GB", "moon") >= 1);
 });
 
 test("US home page keeps its moon icon on the calm tile and rail", () => {
   assert.ok(iconCount("US", "moon") >= 1);
 });
 
-test("GB home page uses the book icon for the calm tile, one more than the US page uses", () => {
-  assert.ok(iconCount("GB", "book") > iconCount("US", "book"));
+// The job rail keeps the neutral book icon for L-theanine in GB; only the tile moved back to the moon.
+test("GB home page still uses the book icon on the job rail, one more than the US page uses", () => {
+  assert.equal(iconCount("GB", "book"), iconCount("US", "book") + 1);
 });
 
-test("GB home page labels the first tile 'Strength' but with the neutral exercise hook", () => {
+test("GB home page shows the US Strength tile copy and not the neutral exercise hook", () => {
   const gb = text("GB");
   assert.match(gb, /Strength/);
-  assert.match(gb, /short, intense bursts of exercise/);
-  assert.doesNotMatch(gb, /Lifting after 40/);
+  assert.match(gb, /Lifting after 40/);
+  assert.match(gb, /Physical Power/);
+  assert.doesNotMatch(gb, /Do short, intense bursts of exercise\? Meet creatine/);
 });
 
 // ---------------------------------------------------------------------------

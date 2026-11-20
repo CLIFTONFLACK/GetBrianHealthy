@@ -16,7 +16,7 @@ import {
   TAGLINE,
   faqs,
   getSupplement,
-  localizeGoal,
+  localizeTile,
   localizeSupplement,
   productsFor,
   tileGoals,
@@ -313,7 +313,7 @@ export default async function HealthyHome() {
             {/* Orange is kept for retailer (Buy) buttons only. One button per goal,
                 each straight to that goal's review, rather than back up the page. */}
             {tileGoals.map((baseGoal) => {
-              const goal = localizeGoal(baseGoal, region);
+              const goal = localizeTile(baseGoal, region);
               const s = localizeSupplement(getSupplement(goal.supplement), region);
               const review = supplementHref(s, region);
               return (
