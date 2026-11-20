@@ -251,19 +251,19 @@ test("healthy-mark.png file exists in public/", () => {
   assert.ok(existsSync(absoluteFromPublic("/healthy/brand/healthy-mark.png")));
 });
 
-test("layout shows the Healthy mark twice: the desktop sidebar and the footer tile", () => {
-  const occurrences = layoutSource.match(/\/healthy\/brand\/healthy-mark\.png/g) ?? [];
-  // The small-screen floating header stays links only; the left sidebar
-  // (lg and up) and the footer tile each carry one mark.
-  assert.equal(occurrences.length, 2);
-  const aside = layoutSource.slice(layoutSource.indexOf("<aside"), layoutSource.indexOf("</aside>"));
-  assert.match(aside, /\/healthy\/brand\/healthy-mark\.png/);
+test("the Healthy mark shows twice: once in the site header and once on the footer tile", () => {
+  const headerSource = readFileSync(path.resolve(testDir, "../site-header.tsx"), "utf8");
+  const mark = /\/healthy\/brand\/healthy-mark\.png/g;
+  assert.equal((headerSource.match(mark) ?? []).length, 1, "site-header.tsx");
+  assert.equal((layoutSource.match(mark) ?? []).length, 1, "layout.tsx footer");
+  const footer = layoutSource.slice(layoutSource.indexOf("<footer"), layoutSource.indexOf("</footer>"));
+  assert.match(footer, mark);
 });
 
-test("the floating header carries no logo image", () => {
-  const header = layoutSource.slice(layoutSource.indexOf("<header"), layoutSource.indexOf("</header>"));
-  assert.ok(header.length > 0, "expected a <header> in layout.tsx");
-  assert.doesNotMatch(header, /<Image\b/);
+test("layout renders the site header and no longer carries a floating menu or side aside", () => {
+  assert.match(layoutSource, /<SiteHeader \/>/);
+  assert.doesNotMatch(layoutSource, /<aside\b/);
+  assert.doesNotMatch(layoutSource, /<header\b/);
 });
 
 test("layout no longer references the masterbrand mark", () => {

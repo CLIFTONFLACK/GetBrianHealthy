@@ -17,6 +17,7 @@ const read = (rel: string) => readFileSync(path.resolve(here, rel), "utf8").repl
 const pageSource = read("../routine/page.tsx");
 const plannerSource = read("../routine-planner.tsx");
 const layoutSource = read("../layout.tsx");
+const headerSource = read("../site-header.tsx");
 
 // ---------------------------------------------------------------------------
 // Metadata and sitemap
@@ -93,12 +94,9 @@ test("the mascot and mark images the page and planner name exist under public/",
 // layout.tsx: the four site-chrome marks the print rule depends on, and the nav entry
 // ---------------------------------------------------------------------------
 
-test("layout.tsx marks exactly four elements as site chrome", () => {
-  assert.equal((layoutSource.match(/data-chrome/g) ?? []).length, 4);
-});
-
-test("the side navigation aside is marked as chrome", () => {
-  assert.match(layoutSource, /<aside data-chrome /);
+test("layout.tsx and site-header.tsx mark exactly three elements as site chrome", () => {
+  assert.equal((layoutSource.match(/data-chrome/g) ?? []).length, 2);
+  assert.equal((headerSource.match(/data-chrome/g) ?? []).length, 1);
 });
 
 test("the disclosure bar is marked as chrome", () => {
@@ -106,7 +104,7 @@ test("the disclosure bar is marked as chrome", () => {
 });
 
 test("the header is marked as chrome", () => {
-  assert.match(layoutSource, /<header data-chrome /);
+  assert.match(headerSource, /<header data-chrome /);
 });
 
 test("the footer is marked as chrome", () => {
@@ -114,5 +112,5 @@ test("the footer is marked as chrome", () => {
 });
 
 test("the navigation has a Daily routine entry pointing at /routine", () => {
-  assert.match(layoutSource, /\{ href: "\/routine", label: "Daily routine" \}/);
+  assert.match(headerSource, /\{ href: "\/routine", label: "Daily routine" \}/);
 });

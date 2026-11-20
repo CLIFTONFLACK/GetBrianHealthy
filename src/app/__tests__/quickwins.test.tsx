@@ -100,7 +100,7 @@ test("hero link target is the JobRail list, so the products (not the heading) ar
   assert.equal(hero.props.href, `#${railList().props.id}`);
 });
 
-test("JobRail list has scroll-mt-20 so the fixed top bar does not cover the picks after the jump", () => {
+test("JobRail list has scroll-mt-20 so the picks land with some room above them after the jump", () => {
   assert.match(railList().props.className as string, /(^|\s)scroll-mt-20(\s|$)/);
 });
 
