@@ -493,16 +493,22 @@ test("US L-theanine page lists evidence and not the UK no-claim notice", async (
 
 test("GB L-theanine page text contains none of relax, stress, calm, sleep, mood, focus outside the fixed notice", async () => {
   const text = await pageText("pure-encapsulations-l-theanine", "GB");
-  // The page's own explanatory notice and the fixed "Calm" copy are not
-  // product claims, so the check runs on the text with that notice removed.
-  const withoutNotice = text.replace(/No health claim is authorised[^.]*\./, "");
+  // The page's own explanatory notice is not a product claim, and neither is the
+  // goal label "Calm" Clifton put back on 2026-11-05, so the check runs on the text
+  // with the notice and the two places the label stands (the eyebrow and the job
+  // line) removed. Any other "calm" still fails.
+  const withoutNotice = text
+    .replace(/No health claim is authorised[^.]*\./, "")
+    .replace(/L-theanine\s*·\s*Calm/, "L-theanine")
+    .replace(/(Its job in the program\s+)Calm/, "$1");
   assert.doesNotMatch(withoutNotice, /relax|stress|calm|sleep|mood|focus/i);
 });
 
-test("GB creatine page lists its job as Exercise and never Strength or Focus", async () => {
+test("GB creatine page lists its job as Strength, then Focus, with the neutral hedge and never the US wording", async () => {
   const text = await pageText("thorne-creatine", "GB");
-  assert.match(text, /Its job in the program\s+Exercise/);
-  assert.doesNotMatch(text, /Strength|Focus|Promising, but not yet established|Cognitive/);
+  assert.match(text, /Its job in the program\s+Strength/);
+  assert.match(text, /Focus\s*Early research, nothing proven/);
+  assert.doesNotMatch(text, /Promising, but not yet established|Cognitive|Cognition|Lifting after 40/);
 });
 
 test("US creatine page lists Strength and Focus with the focus caveat", async () => {
@@ -514,8 +520,8 @@ test("US creatine page lists Strength and Focus with the focus caveat", async ()
 
 test("GB magnesium page's 'rest of the program' list uses the UK creatine and L-theanine wording", async () => {
   const text = await pageText(REAL_SLUG, "GB");
-  assert.match(text, /Exercise/);
-  assert.match(text, /Evening/);
+  assert.match(text, /Strength/);
+  assert.match(text, /Calm/);
   assert.doesNotMatch(text, /Lifting after 40|wind down|wired at 10pm/);
 });
 
@@ -579,12 +585,12 @@ test("hero eyebrow reads 'Creatine · Strength' for the US creatine", async () =
   assert.match(await heroText("pure-encapsulations-creatine", "US"), /Creatine · Strength/);
 });
 
-test("hero eyebrow uses the UK goal label 'Exercise' for the GB creatine", async () => {
-  assert.match(await heroText("thorne-creatine", "GB"), /Creatine · Exercise/);
+test("hero eyebrow uses the same goal label 'Strength' for the GB creatine as the US", async () => {
+  assert.match(await heroText("thorne-creatine", "GB"), /Creatine · Strength/);
 });
 
-test("hero eyebrow uses the UK goal label 'Evening' for the GB L-theanine", async () => {
-  assert.match(await heroText("pure-encapsulations-l-theanine", "GB"), /L-theanine · Evening/);
+test("hero eyebrow uses the same goal label 'Calm' for the GB L-theanine as the US", async () => {
+  assert.match(await heroText("pure-encapsulations-l-theanine", "GB"), /L-theanine · Calm/);
 });
 
 test("hero drops the goal name but keeps the product's own photo when its supplement has no goal", async () => {
@@ -757,8 +763,9 @@ test("GB L-theanine hero names no evidence grade", async () => {
   assert.doesNotMatch(await heroText("pure-encapsulations-l-theanine", "GB"), /evidence/i);
 });
 
-test("GB L-theanine hero uses no claim words", async () => {
-  assert.doesNotMatch(await heroText("pure-encapsulations-l-theanine", "GB"), /relax|stress|calm|sleep|mood|focus|wind/i);
+test("GB L-theanine hero uses no claim words beyond its 'Calm' goal label in the eyebrow", async () => {
+  const text = (await heroText("pure-encapsulations-l-theanine", "GB")).replace("L-theanine · Calm", "L-theanine");
+  assert.doesNotMatch(text, /relax|stress|calm|sleep|mood|focus|wind/i);
 });
 
 test("US L-theanine hero does carry a claim word, its Calm goal in the eyebrow (so the GB check can fail)", async () => {

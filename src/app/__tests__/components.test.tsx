@@ -441,16 +441,24 @@ function listItems(ul: ReturnType<typeof GoalChooser>): unknown[] {
   return Array.isArray(kids) ? kids : [kids];
 }
 
-test("GoalChooser renders one tile per shown goal: energy, strength, calm", () => {
+test("GoalChooser renders one tile per shown goal: strength, focus, calm", () => {
   const items = listItems(GoalChooser());
   assert.equal(items.length, tileGoals.length);
-  assert.deepEqual(tileGoals.map((g) => g.id), ["energy", "strength", "calm"]);
+  assert.deepEqual(tileGoals.map((g) => g.id), ["strength", "focus", "calm"]);
 });
 
-test("Focus has no homepage tile but stays a creatine goal (rail and review page)", () => {
-  assert.equal(tileGoals.some((g) => g.id === "focus"), false);
+test("Energy has no homepage tile but stays a magnesium goal (rail and review page)", () => {
+  assert.equal(tileGoals.some((g) => g.id === "energy"), false);
+  const energy = goals.find((g) => g.id === "energy");
+  assert.ok(energy, "energy goal still exists in data");
+  assert.equal(energy.supplement, "magnesium");
+});
+
+test("Focus has a homepage tile and is a creatine goal that keeps its caveat", () => {
+  assert.equal(tileGoals.some((g) => g.id === "focus"), true);
   const focus = goals.find((g) => g.id === "focus");
   assert.ok(focus, "focus goal still exists in data");
+  assert.equal(focus.caveat, "promising, not proven");
   assert.equal(focus.supplement, "creatine");
 });
 
@@ -499,14 +507,62 @@ test('GoalChooser "strength" goal links to the UK creatine for a GB visitor', ()
   assert.equal(anchor.props.href, "/products/thorne-creatine");
 });
 
-test('GoalChooser "calm" tile for a GB visitor is relabelled "Evening" and says nothing about calm or stress', () => {
-  const items = listItems(GoalChooser({ region: "GB" })) as { props: { children: { props: { children: unknown[] } } } }[];
-  const calmIndex = tileGoals.findIndex((g) => g.id === "calm");
-  const anchorChildren = items[calmIndex].props.children.props.children;
-  const contentDiv = anchorChildren[2] as { props: { children: { props: { children: unknown } }[] } };
-  const [, , labelSpan, hookParagraph] = contentDiv.props.children;
-  assert.equal(labelSpan.props.children, "Evening");
-  assert.equal(hookParagraph.props.children, "Meet L-theanine, an amino acid found naturally in tea.");
+// Everything a visitor reads on one tile: image alt, icon, eyebrow, label and hook.
+function tileCopy(region: "US" | "GB", i: number) {
+  const items = listItems(GoalChooser({ region })) as { props: { children: { props: { children: unknown[] } } } }[];
+  const anchorChildren = items[i].props.children.props.children as { props: Record<string, unknown> }[];
+  const contentDiv = anchorChildren[2] as unknown as {
+    props: { children: { props: { children: unknown } }[] };
+  };
+  const [chip, eyebrow, labelSpan, hookParagraph] = contentDiv.props.children;
+  const chipChild = chip.props.children as { props: { name: string } };
+  return {
+    alt: anchorChildren[0].props.alt,
+    icon: chipChild.props.name,
+    eyebrowDetail: (eyebrow.props.children as unknown[]).join("").split("·").pop()?.trim(),
+    label: labelSpan.props.children,
+    hook: hookParagraph.props.children,
+  };
+}
+
+// Clifton, 2026-11-20: UK visitors read the same tile copy as US visitors.
+// The literals are the US strings, so a change to the shared copy has to be made here on purpose.
+const TILE_COPY = [
+  {
+    alt: "A man mid-lift in a gym",
+    icon: "dumbbell",
+    eyebrowDetail: "Physical Power",
+    label: "Strength",
+    hook: "Lifting after 40? Meet one of the most-studied supplements for strength.",
+  },
+  {
+    alt: "A woman calmly focused at a desk",
+    icon: "target",
+    eyebrowDetail: "Cognition",
+    label: "Focus",
+    hook: "Creatine for your brain? Promising, not proven. Here is what the research really shows.",
+  },
+  {
+    alt: "A man reading by lamplight in the evening",
+    icon: "moon",
+    eyebrowDetail: "Wind-Down",
+    label: "Calm",
+    hook: "Still wired at 10pm? Meet the compound from tea that people take to wind down.",
+  },
+];
+
+for (const region of ["US", "GB"] as const) {
+  for (const [i, expected] of TILE_COPY.entries()) {
+    test(`GoalChooser ${expected.label} tile shows the same copy, icon and image alt for a ${region} visitor`, () => {
+      assert.deepEqual(tileCopy(region, i), expected);
+    });
+  }
+}
+
+test('GoalChooser "focus" tile for a GB visitor still opens the creatine page at the top, with no hash', () => {
+  const items = listItems(GoalChooser({ region: "GB" })) as { props: { children: { props: Record<string, unknown> } } }[];
+  const focusIndex = tileGoals.findIndex((g) => g.id === "focus");
+  assert.equal(items[focusIndex].props.children.props.href, "/products/thorne-creatine");
 });
 
 test('GoalChooser "calm" tile for a US visitor keeps the "Calm" label', () => {
@@ -518,11 +574,11 @@ test('GoalChooser "calm" tile for a US visitor keeps the "Calm" label', () => {
   assert.equal(labelSpan.props.children, "Calm");
 });
 
-test('GoalChooser "energy" goal links to the magnesium review with no hash', () => {
+test('GoalChooser "focus" goal links to the creatine review, landing on its caveated section', () => {
   const items = listItems(GoalChooser()) as { props: { children: { props: Record<string, unknown> } } }[];
-  const energyIndex = tileGoals.findIndex((g) => g.id === "energy");
-  const anchor = items[energyIndex].props.children;
-  assert.equal(anchor.props.href, "/products/pure-encapsulations-magnesium-glycinate");
+  const focusIndex = tileGoals.findIndex((g) => g.id === "focus");
+  const anchor = items[focusIndex].props.children;
+  assert.equal(anchor.props.href, "/products/pure-encapsulations-creatine#creatine");
 });
 
 test('GoalChooser "calm" goal links to the l-theanine review with no hash', () => {

@@ -16,7 +16,7 @@ import {
   TAGLINE,
   faqs,
   getSupplement,
-  localizeGoal,
+  localizeTile,
   localizeSupplement,
   productsFor,
   tileGoals,
@@ -35,14 +35,14 @@ const primaryCta =
 const HERO_POINTS = [
   { icon: "traces", text: "3 Supplements, 3 Jobs" },
   { icon: "seal", text: "Carefully Researched, Honestly Reviewed" },
-  { icon: "crossSolid", text: "Energy, Strength and Calm When You Need It Most" },
+  { icon: "crossSolid", text: "Strength, Focus and Calm When You Need It Most" },
 ] as const;
 
 export default async function HealthyHome() {
   const region = await getRegion();
   const products = productsFor(region);
-  // "Calm" is a claim for L-theanine, which has no authorised health claim in the UK.
-  const heroPoints = region === "GB" ? HERO_POINTS.map((p, i) => (i === 2 ? { ...p, text: "Energy and Exercise, Explained From the Research" } : p)) : HERO_POINTS;
+  // "When You Need It Most" promises a result, which the UK rules do not allow for these goals.
+  const heroPoints = region === "GB" ? HERO_POINTS.map((p, i) => (i === 2 ? { ...p, text: "Strength, Focus and Calm, Explained From the Research" } : p)) : HERO_POINTS;
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -313,7 +313,7 @@ export default async function HealthyHome() {
             {/* Orange is kept for retailer (Buy) buttons only. One button per goal,
                 each straight to that goal's review, rather than back up the page. */}
             {tileGoals.map((baseGoal) => {
-              const goal = localizeGoal(baseGoal, region);
+              const goal = localizeTile(baseGoal, region);
               const s = localizeSupplement(getSupplement(goal.supplement), region);
               const review = supplementHref(s, region);
               return (

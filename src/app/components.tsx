@@ -5,7 +5,7 @@ import {
   costPerServing,
   AMAZON_ASSOCIATE_STATEMENT,
   getSupplement,
-  localizeGoal,
+  localizeTile,
   localizeSupplement,
   pickFor,
   tileGoals,
@@ -329,7 +329,7 @@ export function GoalChooser({ region = "US" }: { region?: Region } = {}) {
   return (
     <ul className="grid grid-cols-1 gap-6 md:grid-cols-3">
       {tileGoals.map((baseGoal) => {
-        const goal = localizeGoal(baseGoal, region);
+        const goal = localizeTile(baseGoal, region);
         const s = localizeSupplement(getSupplement(goal.supplement), region);
         const review = supplementHref(s, region);
         const href = review ? (goal.section ? `${review}#${goal.section}` : review) : `#${s.id}`;

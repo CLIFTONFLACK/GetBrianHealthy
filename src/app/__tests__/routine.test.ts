@@ -525,11 +525,11 @@ test("pickOptions for the US offers Strength, Energy and Calm, in picker order",
   ]);
 });
 
-test("pickOptions for the GB offers Exercise, Energy and Evening, in picker order", () => {
+test("pickOptions for the GB offers the same Strength, Energy and Calm as the US, in picker order", () => {
   assert.deepEqual(pickOptions("GB"), [
-    { id: "creatine", supplement: "Creatine", goal: "Exercise" },
+    { id: "creatine", supplement: "Creatine", goal: "Strength" },
     { id: "magnesium", supplement: "Magnesium", goal: "Energy" },
-    { id: "l-theanine", supplement: "L-theanine", goal: "Evening" },
+    { id: "l-theanine", supplement: "L-theanine", goal: "Calm" },
   ]);
 });
 

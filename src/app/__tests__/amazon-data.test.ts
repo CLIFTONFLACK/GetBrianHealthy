@@ -18,6 +18,7 @@ import {
   productsFor,
   resolveProduct,
   retailerName,
+  tileGoals,
   topGrade,
   type Product,
 } from "../data.ts";
@@ -495,9 +496,11 @@ test("localizeGoal returns the goal itself for the US", () => {
   assert.equal(localizeGoal(g, "US"), g);
 });
 
-test("localizeGoal GB removes claim wording from the calm goal and keeps its supplement", () => {
+test("localizeGoal GB removes claim wording from the calm goal's hook and eyebrow, keeps its label and supplement", () => {
   const gb = localizeGoal(goals.find((x) => x.id === "calm")!, "GB");
-  assert.doesNotMatch(`${gb.label} ${gb.hook} ${gb.eyebrowDetail}`, CLAIM_WORDS);
+  // The label "Calm" is kept on purpose (Clifton, 2026-11-05). Everything under it stays free of claim wording.
+  assert.equal(gb.label, "Calm");
+  assert.doesNotMatch(`${gb.hook} ${gb.eyebrowDetail}`, CLAIM_WORDS);
   assert.doesNotMatch(`${gb.hook} ${gb.eyebrowDetail}`, /wind-down|wired/i);
   assert.equal(gb.supplement, "l-theanine");
 });
@@ -507,18 +510,29 @@ test("the US calm goal still carries claim wording (so the GB check can fail)", 
   assert.match(`${us.label} ${us.hook} ${us.eyebrowDetail}`, CLAIM_WORDS);
 });
 
-test("localizeGoal GB leaves the energy and focus goals unchanged", () => {
-  for (const id of ["energy", "focus"] as const) {
-    const g = goals.find((x) => x.id === id)!;
-    assert.deepEqual(localizeGoal(g, "GB"), g, id);
-  }
+test("localizeGoal GB leaves the energy goal unchanged", () => {
+  const g = goals.find((x) => x.id === "energy")!;
+  assert.deepEqual(localizeGoal(g, "GB"), g);
 });
 
-test("localizeGoal GB relabels strength as Exercise with a neutral hook", () => {
+test("localizeGoal GB keeps the Focus label but swaps the hook and eyebrow for neutral wording", () => {
+  const us = goals.find((x) => x.id === "focus")!;
+  const gb = localizeGoal(us, "GB");
+  assert.equal(gb.label, "Focus");
+  assert.notEqual(gb.hook, us.hook);
+  assert.notEqual(gb.eyebrowDetail, us.eyebrowDetail);
+  assert.doesNotMatch(`${gb.hook} ${gb.eyebrowDetail}`, GB_FORBIDDEN);
+  assert.equal(gb.supplement, "creatine");
+  assert.equal(gb.caveat, us.caveat);
+  assert.equal(us.section, "creatine");
+  assert.equal(gb.section, undefined);
+});
+
+test("localizeGoal GB keeps the Strength label with a neutral hook", () => {
   const gb = localizeGoal(goals.find((x) => x.id === "strength")!, "GB");
-  assert.equal(gb.label, "Exercise");
+  assert.equal(gb.label, "Strength");
   assert.equal(gb.eyebrowDetail, "High-Intensity Exercise");
-  assert.doesNotMatch(`${gb.label} ${gb.hook} ${gb.eyebrowDetail}`, GB_FORBIDDEN);
+  assert.doesNotMatch(`${gb.hook} ${gb.eyebrowDetail}`, GB_FORBIDDEN);
   assert.equal(gb.supplement, "creatine");
   assert.equal(gb.icon, goals.find((x) => x.id === "strength")!.icon);
 });
@@ -542,14 +556,15 @@ test("goalsForSupplement creatine for US includes strength then focus", () => {
   assert.deepEqual(goalsForSupplement("creatine", "US").map((g) => g.id), ["strength", "focus"]);
 });
 
-test("goalsForSupplement creatine for GB excludes focus", () => {
-  assert.deepEqual(goalsForSupplement("creatine", "GB").map((g) => g.id), ["strength"]);
+test("goalsForSupplement creatine for GB includes strength then focus, as in the US", () => {
+  assert.deepEqual(goalsForSupplement("creatine", "GB").map((g) => g.id), ["strength", "focus"]);
 });
 
-test("goalsForSupplement for GB returns localized goals", () => {
-  assert.equal(goalsForSupplement("creatine", "GB")[0].label, "Exercise");
-  assert.equal(goalsForSupplement("l-theanine", "GB")[0].label, "Evening");
+test("goalsForSupplement for GB returns localized goals with the same labels as the US", () => {
+  assert.equal(goalsForSupplement("creatine", "GB")[0].label, "Strength");
+  assert.equal(goalsForSupplement("l-theanine", "GB")[0].label, "Calm");
   assert.equal(goalsForSupplement("creatine", "US")[0].label, "Strength");
+  assert.notEqual(goalsForSupplement("creatine", "GB")[0].hook, goalsForSupplement("creatine", "US")[0].hook);
 });
 
 test("goalsForSupplement returns magnesium's and L-theanine's single goal in both regions", () => {
@@ -565,12 +580,33 @@ test("goalsForSupplement does not mutate the shared goals list", () => {
   assert.equal(JSON.stringify(goals), before);
 });
 
-test("no goal shown to a GB visitor, for any supplement, carries forbidden wording", () => {
+test("no goal shown to a GB visitor, for any supplement, carries forbidden wording in its hook, eyebrow or image alt text", () => {
   for (const id of ["magnesium", "creatine", "l-theanine"] as const) {
     for (const g of goalsForSupplement(id, "GB")) {
-      assert.doesNotMatch(`${g.label} ${g.hook} ${g.eyebrowDetail}`, GB_FORBIDDEN, g.id);
+      assert.doesNotMatch(`${g.hook} ${g.eyebrowDetail} ${g.imageAlt}`, GB_FORBIDDEN, g.id);
     }
   }
+});
+
+test("the US Focus image alt text carries forbidden wording, so the GB alt text check can fail", () => {
+  assert.match(goals.find((x) => x.id === "focus")!.imageAlt, GB_FORBIDDEN);
+});
+
+test("the only goal labels a GB visitor can see are the four Clifton chose", () => {
+  // Strength, Focus and Calm are labels the owner put back on 2026-11-05. Any other label with a forbidden word fails.
+  const allowed = new Set(["Energy", "Strength", "Focus", "Calm"]);
+  for (const id of ["magnesium", "creatine", "l-theanine"] as const) {
+    for (const g of goalsForSupplement(id, "GB")) assert.ok(allowed.has(g.label), g.label);
+  }
+});
+
+test("the GB hook check does fail on the US Focus hook (so it can catch a regression)", () => {
+  const us = goals.find((x) => x.id === "focus")!;
+  assert.match(`${us.hook} ${us.eyebrowDetail}`, GB_FORBIDDEN);
+});
+
+test("the homepage tiles are Strength, Focus and Calm, in that order", () => {
+  assert.deepEqual(tileGoals.map((g) => g.label), ["Strength", "Focus", "Calm"]);
 });
 
 test("localizeGoal does not mutate the shared goal", () => {
